@@ -1,0 +1,122 @@
+<html>
+
+<head>
+	<title>##INVOICE TYPE##</title>
+	<link async="" href="invoice.css" rel="stylesheet" type="text/css" />
+</head>
+
+<body>
+	<div class="row">
+		<div class="invoice_content">
+			<div class="col-xs-12 invoice_header">
+				<p class="h1">##INVOICE TYPE##</p>
+				<p class="invoice_type">Original</p><br />
+			</div>
+			<div class="col-xs-12 invoice_sub_header">
+				<div class="row">
+					<div class="col-xs-4 issued_by">
+						<p class="issued">Issued By:</p>
+						<p class="title">##FIRM NAME##</p>
+						<p class="address">##FIRM ADDRESS##</p>
+						<p class="gst">GSTIN: ##FIRM GST##</p>
+					</div>
+					<div class="col-xs-4 invoice_details">
+						<ul>
+							<li class="first">##INVOICE TYPE ALT## #</li>
+							<li class="details">##INVOICE NUMBER##</li>
+							<li>##INVOICE TYPE ALT## Date</li>
+							<li class="details">##INVOICE DATE##</li>
+							<li>Due Date</li>
+							<li class="details last">##DUE DATE##</li>
+						</ul>
+					</div>
+					<div class="col-xs-4 issued_to">
+						<p class="issued">Issued To:</p>
+						<p class="title">##PARTY NAME##</p>
+						<p class="address">##PARTY ADDRESS##</p>
+						<p class="gst">GSTIN: ##PARTY GST##</p>
+					</div>
+				</div><br />
+			</div>
+			<div class="col-xs-12 invoice_items ">
+				<table class="table table-striped table-hover">
+					<thead class="first">
+						<tr class="first">
+							<th> #</th>
+							<th>Particulars</th>
+							<th class="hidden-480">HSN</th>
+							<th class="hidden-480">Quantity</th>
+							<th class="hidden-480">Rate</th>
+							<th class="last">Total</th>
+						</tr>
+					</thead>##LINE ITEMS##
+				</table>
+			</div>
+			<div class="col-xs-12">
+				<div class="invoice_footer">
+					<div class="row footer_table">
+						<div class="footer_table_left">
+							<p class="amount_words"><i>Total in words: ##TOTAL WORDS##</i></p>
+							<div class="bank_details">
+								<ul>
+									<li><b>Company Bank Account Details:</b></li>
+									<li><b>Bank Name:</b> ##BANK NAME##</li>
+									<li><b>Branch Name:</b> ##BRANCH NAME##</li>
+									<li><b>Account Type:</b> ##ACCOUNT TYPE##</li>
+									<li><b>Account Number:</b> ##ACCOUNT NUMBER##</li>
+									<li><b>IFS Code:</b> ##BANK IFSC##</li>
+								</ul>
+							</div>
+						</div>
+						<div class="footer_table_right">
+							<table class="table">
+								<tbody>
+									<tr>
+										<td class="bold">Sub Total</td>
+										<td class="last">&#8377;##SUB TOTAL##</td>
+									</tr>
+									<tr>
+										<td class="bold">CGST (9%)</td>
+										<td class="last">&#8377;##CGST##</td>
+									</tr>
+									<tr>
+										<td class="bold">SGST (9%)</td>
+										<td class="last">&#8377;##SGST##</td>
+									</tr>
+									<tr>
+										<td class="bold">Total</td>
+										<td class="last">&#8377;##TOTAL##</td>
+									</tr>
+									<tr>
+										<td class="bold">Total Rounded</td>
+										<td class="last">&#8377;##ROUNDED TOTAL##</td>
+									</tr>
+								</tbody>
+							</table>
+						</div>
+					</div>
+					<div class="row">
+						<div class="col-xs-12 tnc">
+							<p class="title">Terms & Conditions:</p>
+							<ol class="ol">
+								<li>Interest @ 24% pa will be charged on all overdue invoices</li>
+								<li>Subject to Surat Jurisdiction only</li>
+							</ol>
+							<p class="title">Declaration:</p>
+							<ul class="ol">
+								<li>We declare that this invoice shows all the actual price of the goods & service described and that all particulars are true and correct</li>
+							</ul>
+						</div>
+					</div>
+					<div class="row">
+						<div class="col-xs-12">
+							<p class="sign_note">This is a computer generated document and hence no signature is required</p>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</body>
+
+</html>

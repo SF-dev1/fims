@@ -1,0 +1,17 @@
+{
+    "require": {
+        "mpdf/mpdf": "^8.0",
+        "mpdf/qrcode": "^1.0",
+        "phpoffice/phpspreadsheet": "1.16.0",
+        "matomo/device-detector": "^3.13",
+        "verot/class.upload.php": "*",
+        "phpclassic/php-shopify": "^1.1.22",
+        "razorpay/razorpay": "2.*",
+        "rajathans/shiprocket-php": "^1.0"
+    },
+    "config": {
+        "platform": {
+            "php": "7.4"
+        }
+    }
+}

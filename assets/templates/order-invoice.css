@@ -1,0 +1,226 @@
+/*@import url("http://localhost/fims-live/assets/plugins/bootstrap/css/bootstrap.min.css");*/
+@import url(https://fonts.googleapis.com/css?family=Nunito:300,400,400i,600,700&subset=all);
+body{margin:0;}
+strong{font-weight:700;}
+table{border-spacing:0;border-collapse:collapse;}
+td,th{padding:0;}
+@media print{
+    *{color:#000!important;text-shadow:none!important;background:transparent!important;-webkit-box-shadow:none!important;box-shadow:none!important;}
+    thead{display:table-header-group;}
+    tr{page-break-inside:avoid;}
+    p{orphans:3;widows:3;}
+    .table td,.table th{background-color:#fff!important;}
+    .table{border-collapse:collapse!important;}
+}
+*{-webkit-box-sizing:border-box;-moz-box-sizing:border-box;box-sizing:border-box;}
+:before,:after{-webkit-box-sizing:border-box;-moz-box-sizing:border-box;box-sizing:border-box;}
+body{font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;font-size:14px;line-height:1.42857143em;color:#333;background-color:#fff;}
+p{margin:0 0 10px;}
+ul,ol{margin-top:0;margin-bottom:10px;}
+.row{margin-right:-15px;margin-left:-15px;}
+.col-xs-3,.col-xs-4,.col-xs-9,.col-xs-12{position:relative;min-height:1px;padding-right:15px;padding-left:15px;}
+.col-xs-3,.col-xs-4,.col-xs-9,.col-xs-12{float:left;}
+.col-xs-12{width:100%;}
+.col-xs-9{width:75%;}
+.col-xs-4{width:33.33333333%;}
+.col-xs-3{width:25%;}
+
+body {
+    font-family: "Nunito", sans-serif;
+    font-size: 12px;
+}
+.invoice_content {
+    width: 210mm;
+    height: 297mm;
+}
+.invoice_header {
+    border-bottom: 1px solid #ddd;
+    margin-bottom: 10px;
+}
+.invoice_header .h1logo{
+    float: left;
+    margin-top: 10px;
+    margin-bottom:10px;
+    width: 50%;
+}
+.invoice_header .h1logo img{
+    max-height: 110px;
+    font-weight:500;
+}
+.invoice_header .h1 {
+    line-height: 130px;
+    font-size: 26px;
+    width: 50%;
+    float: right;
+    text-align: right;
+    margin: 0;
+}
+.invoice_header .invoice_type {
+    text-align: right;
+    margin-top: 20px;
+    vertical-align: top;
+}
+
+.invoice_sub_header {
+    margin-bottom: 10px;
+}
+
+.invoice_sub_header .title {
+    display: block;
+    font-weight: bold;
+    font-size: 12px;
+    line-height: 17px;
+    margin-bottom: 0px;
+}
+
+.invoice_sub_header .address, .invoice_sub_header .state, .invoice_sub_header .country, .invoice_sub_header .gst, .invoice_sub_header .website {
+    margin: 0;
+    font-style: normal;
+    line-height: 1.42857143em;
+}
+
+.invoice_sub_header .issued_by .issued, .invoice_sub_header .issued_to .issued, .invoice_sub_header .invoice_details .issued{
+    /*font-weight: bold;   */
+    margin-bottom: 0;
+}
+.invoice_sub_header .issued_to, .invoice_sub_header .issued_by, .invoice_sub_header .invoice_details{
+    display: block;
+    width: 200px;
+    float: left;
+}
+ 
+.invoice_sub_header .invoice_details {
+    width: 290px;
+}
+
+.invoice_sub_header .issued_by{
+    border-right: 1px solid #ddd;
+}
+
+.invoice_sub_header .invoice_details ul {
+    padding: 0;
+    margin: 0;
+}
+
+.invoice_sub_header .invoice_details li {
+    list-style-type: none;
+    float: left;
+    /*line-height: 1.628571em;*/
+}
+
+.invoice_sub_header .invoice_details .heading {
+    font-weight: bold;
+    width: 120px;
+    display: inline-block;
+    float: left;
+}
+
+.invoice_sub_header .invoice_details div.details {
+    font-weight: normal;
+}
+
+/*.invoice_sub_header .invoice_details li.first{
+    line-height: 0;
+}
+
+.invoice_sub_header .invoice_details li.details {
+    font-weight: normal;
+}
+
+.invoice_sub_header .invoice_details li.last {
+    margin: 0;
+}*/
+
+.invoice_items {
+    /*height: 480px;*/
+}
+
+.table {
+    width: 100%;
+    max-width: 100%;
+    margin-bottom: 20px;
+}
+
+.invoice_items th, .invoice_items td{
+    padding: 8px;
+    line-height:1.42857143em;
+    border-top:1px solid #ddd;
+    text-align: center;
+    font-size: 10px;
+}
+
+.invoice_items th{
+    font-size: 10px;
+}
+
+.invoice_items th {
+    font-weight: bold;
+    vertical-align: middle;
+}
+
+.invoice_items td {
+    vertical-align: top;
+}
+
+.invoice_items th.title,
+.invoice_items tfoot td.title {
+    text-align: left;
+    font-weight: bold;
+}
+
+.invoice_items td.particulars {
+    text-align: left;
+}
+.invoice_items td .title {
+    font-weight: bold;
+}
+/*.invoice_items .title .sub {
+    display: block;
+}*/
+
+.invoice_items .table tfoot td{
+    padding: 8px;
+    line-height:1.42857143em;
+    vertical-align:top;
+    border-top:1px solid #ddd;
+    text-align: center;
+    font-size: 10px;
+    font-weight: bold;
+}
+
+.invoice_items .table tfoot {
+    border-bottom: 4px double #ddd;
+    border-top: 4px double #ddd;
+}
+
+.footer {
+    border-top: 1px solid #ddd;
+    padding-top: 10px;
+}
+
+.tnc{
+    /*border-top : 1px dotted #ddd; */
+    /*margin-bottom: 0;*/
+}
+
+ul.ol {
+    padding-left: 24px;
+}
+
+.tnc ul.ol li{
+    list-style-type: none;
+    line-height: 1.1em;
+    padding-top: 5px;
+    text-align: center;
+}
+
+.tnc a{
+    color: #000;
+}
+
+.sign_note{
+    text-align: center;
+    width: 100%;
+    margin: 0;
+
+}

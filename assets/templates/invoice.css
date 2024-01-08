@@ -1,0 +1,200 @@
+/*@import url("http://localhost/fims-live/assets/plugins/bootstrap/css/bootstrap.min.css");*/
+@import url(https://fonts.googleapis.com/css?family=Nunito:300,400,400i,600,700&subset=all);
+body{margin:0;}
+strong{font-weight:700;}
+table{border-spacing:0;border-collapse:collapse;}
+td,th{padding:0;}
+@media print{
+    *{color:#000!important;text-shadow:none!important;background:transparent!important;-webkit-box-shadow:none!important;box-shadow:none!important;}
+    thead{display:table-header-group;}
+    tr{page-break-inside:avoid;}
+    p{orphans:3;widows:3;}
+    .table td,.table th{background-color:#fff!important;}
+    .table{border-collapse:collapse!important;}
+}
+*{-webkit-box-sizing:border-box;-moz-box-sizing:border-box;box-sizing:border-box;}
+:before,:after{-webkit-box-sizing:border-box;-moz-box-sizing:border-box;box-sizing:border-box;}
+body{font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;font-size:14px;line-height:1.42857143em;color:#333;background-color:#fff;}
+p{margin:0 0 10px;}
+ul,ol{margin-top:0;margin-bottom:10px;}
+.row{margin-right:-15px;margin-left:-15px;}
+.col-xs-3,.col-xs-4,.col-xs-9,.col-xs-12{position:relative;min-height:1px;padding-right:15px;padding-left:15px;}
+.col-xs-3,.col-xs-4,.col-xs-9,.col-xs-12{float:left;}
+.col-xs-12{width:100%;}
+.col-xs-9{width:75%;}
+.col-xs-4{width:33.33333333%;}
+.col-xs-3{width:25%;}
+
+body {
+    font-family: "Nunito", sans-serif;
+    font-size: 10pt;
+}
+.invoice_content {
+    width: 210mm;
+    height: 297mm;
+}
+.invoice_header .h1{
+    font-weight:500;
+    line-height:1.1em;
+    font-size: 36px;
+    width: 180mm;
+    float: left;
+    margin-top: 10px;
+    margin-bottom:10px;
+}
+.invoice_header .invoice_type {
+    text-align: right;
+    margin-top: 20px;
+    vertical-align: top;
+}
+
+.invoice_sub_header .title {
+    display: block;
+    font-weight: bold;
+    font-size: 12pt;
+    margin-bottom: 5px;
+}
+
+.invoice_sub_header .address {
+    margin-bottom: 20px;
+    font-style: normal;
+    line-height: 1.42857143em;
+}
+
+.invoice_sub_header .issued_by{
+    width:28%;
+}
+
+.invoice_sub_header .issued_by .issued, .invoice_sub_header .issued_to .issued{
+    /*font-weight: bold;   */
+    margin-bottom: 0;
+}
+
+.invoice_sub_header .invoice_details {
+    border-right: 1px solid #ddd;
+    text-align: right;
+    font-weight: bold;
+    width:28%;
+}
+
+.invoice_sub_header .invoice_details li {
+    list-style-type: none;
+}
+
+.invoice_sub_header .invoice_details li.first{
+    line-height: 0;
+}
+
+.invoice_sub_header .invoice_details li.details {
+    margin-bottom: 22px;
+    font-weight: normal;
+}
+
+.invoice_sub_header .invoice_details li.last {
+    margin: 0;
+}
+
+.invoice_sub_header .issued_to{
+    width:30%; 
+}
+
+.invoice_items {
+    height: 480px;
+}
+
+.table {
+    width: 100%;
+    max-width: 100%;
+    margin-bottom: 20px;
+}
+
+.invoice_items .table th, .invoice_items .table td, .footer_table_right .table td {
+    padding:8px;
+    line-height:1.42857143em;
+    vertical-align:top;
+    border-top:1px solid #ddd;
+    text-align: left;
+}
+
+.invoice_items th,
+.invoice_footer td {
+    font-size: 10pt;
+}
+
+.invoice_items th {
+    font-weight: bold;
+}
+
+.invoice_items th.last,
+.invoice_items td.last,
+.invoice_footer .footer_table_right .table td.last {
+    text-align: right;
+}
+
+.footer_table {
+    height: 190px;
+}
+
+.invoice_footer .footer_table_left {
+    width: 71%;
+    float: left;
+    margin-left: 15px;
+}
+
+.invoice_footer .footer_table_right{
+    width: 24%;
+    float: right;
+    margin-right: 15px;
+}
+
+.invoice_footer .footer_table_right .table td.bold{
+    font-weight: bold;
+    /*line-height: 1.42857143em;*/
+    vertical-align: top;
+    padding-top: 1px;
+}
+
+.invoice_footer .table tbody td {
+    padding: 5px;
+}
+
+.invoice_footer .amount_words{
+    font-style: italic;
+    margin-bottom: 0;
+}
+
+.bank_details ul {
+    padding: 0;
+    margin: 5px 0 13px 0;
+}
+
+.bank_details li {
+    list-style-type: none;
+}
+
+.tnc .title{
+    font-weight: bold;
+    margin-bottom: 0;
+}
+
+.tnc{
+    border-top : 1px dotted #ddd; 
+    /*margin-bottom: 0;*/
+}
+
+ul.ol {
+    padding-left: 24px;
+}
+
+ul.ol li{
+    list-style-type: none;
+    line-height: 1.1em;
+    padding-top: 5px;
+}
+
+.sign_note{
+    text-align: center;
+    width: 100%;
+    margin: 0;
+
+}
