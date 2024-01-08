@@ -2017,7 +2017,6 @@ if (isset($_REQUEST['action'])) {
                     foreach ($reportsData as $rid) {
                         $reports = $azSpObj->getReportDocumentById($rid["report_id"]);
                         $fileData = $azSpObj->downloadReports($reports["reportDocumentId"]);
-                        ccd($reports);
                         $data = array();
                         if (isset($fileData["compressionAlgorithm"])) {
                             if ($fileData["compressionAlgorithm"] == "GZIP") {
@@ -2143,6 +2142,25 @@ if (isset($_REQUEST['action'])) {
                                     $db->insert(TBL_AZ_RETURNS, $updateData);
                                 }
                             }
+                        } else if ($rid["report_type"] == "GET_FBA_REIMBURSEMENTS_DATA") {
+                            for ($i = 0; $i < count($data); $i++) {
+                                $updateData = array(
+                                    "orderId" => $data[$i]["amazon_order_id"],
+                                    "claimId" => $data[$i]["case_id"],
+                                    "claimStatus" => "resolved",
+                                    "claimStatusAZ" => "resolved",
+                                    "claimComments" => "FBA Reimbursement Id: " . $data[$i]["reimbursement_id"] . " (System)",
+                                    "claimReimbursmentAmount" => $data[$i]["amount_total"],
+                                    "claimNotes" => $data[$i]["reason"],
+                                    "claimProductCondition" => $data[$i]["condition"],
+                                    "createdBy" => "00",
+                                    "createdBy" => "00",
+                                    "createdDate" => date("Y-m-d H:i:s", strtotime("approval_date")),
+                                    "closedDate" => date("Y-m-d H:i:s", strtotime($data[$i]["approval_date"])),
+                                    "updatedDate" => date("Y-m-d H:i:s", strtotime($data[$i]["approval_date"]))
+                                );
+                                $db->insert(TBL_AZ_CLAIMS, $updateData);
+                            }
                         }
                     }
                 }
@@ -2182,6 +2200,139 @@ if (isset($_REQUEST['action'])) {
                 else
                     $return = array('type' => 'error', 'msg' => 'Unable to add report details', 'response' => $reports);
             }
+            echo json_encode($return);
+            break;
+        case 'insert_payments':
+            error_reporting(E_ALL);
+            ini_set('display_errors', '1');
+            echo '<pre>';
+            $account = get_current_account($_GET['account']);
+            $azSpObj = new amazon($account);
+            $report_type = "GET_V2_SETTLEMENT_REPORT_DATA_FLAT_FILE";
+
+            function processFunction($text)
+            {
+                return strtolower(str_replace([' ', '-', '"', '﻿', '_&'], ['_', '_', '', '', ''], trim($text)));
+            };
+
+            $reports = $azSpObj->requestReports($report_type, "100");
+            // ccd($reports);
+            try {
+                foreach ($reports["reports"] as $rpt) {
+                    $fileData = $azSpObj->downloadReports($rpt["reportDocumentId"]);
+
+                    $data = array();
+                    if (isset($fileData["compressionAlgorithm"])) {
+                        if ($fileData["compressionAlgorithm"] == "GZIP") {
+
+                            $compressedData = file_get_contents($fileData["url"]);
+                            $uncompressedData = gzdecode($compressedData);
+
+                            $orders = array();
+                            $rows = explode(PHP_EOL, $uncompressedData);
+                            foreach ($rows as $row) {
+                                $orders[] = str_getcsv($row);
+                            }
+                            $keys = $orders[0];
+
+                            $keys = array_map("processFunction", $keys);
+                            for ($i = 1; $i < count($orders); $i++) {
+                                for ($j = 0; $j < count($orders[$i]); $j++) {
+                                    $data[$i - 1][$keys[$j]] = $orders[$i][$j];
+                                }
+                            }
+                        }
+                    } else {
+                        if (isset($fileData["url"])) {
+                            $rows = array();
+                            if (getUrlMimeType($fileData["url"]) == "text/plain") {
+                                $fileStr = file_get_contents($fileData["url"]);
+                                $rows = explode(PHP_EOL, $fileStr);
+
+                                $keys = explode("	", $rows[0]);
+                                $keys = array_map("processFunction", $keys);
+
+                                for ($i = 1; $i < count($rows); $i++) {
+                                    $values = explode("	", $rows[$i]);
+                                    for ($j = 0; $j < count($keys); $j++) {
+                                        $data[$i - 1][$keys[$j]] = $values[$j];
+                                    }
+                                }
+                            } else {
+                                $file = fopen($fileData["url"], 'r');
+                                while (($rows[] = fgetcsv($file)) != false) {
+                                }
+                                $keys = array_map("processFunction", $rows[0]);
+
+                                for ($i = 1; $i < count($rows); $i++) {
+                                    for ($j = 0; $j < count($keys); $j++) {
+                                        $data[$i - 1][$keys[$j]] = $rows[$i][$j];
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    $settlementDate = $data[0]["deposit_date"];
+                    $settlementId = $data[0]["settlement_id"];
+                    $totalSettledAmount = $data[0]["total_amount"];
+
+                    $payments = array();
+                    $insertData = array();
+
+                    for ($i = 1; $i < count($data); $i++) {
+                        $orderId = $data[$i]["order_id"];
+                        $itemCode = $data[$i]["order_item_code"];
+
+                        $index = $i;
+                        while ($orderId == $data[$i]["order_id"]) {
+                            $payments[$index][$orderId][$itemCode]["gst"] = 0;
+                            foreach ($data[$i] as $key => $value) {
+
+                                if ($key == "price_type") {
+                                    $payments[$index][$orderId][$itemCode][processFunction($value)] = $data[$i]["price_amount"];
+                                } else if ($key == "item_related_fee_type") {
+                                    $payments[$index][$orderId][$itemCode][processFunction($value)] = $data[$i]["item_related_fee_amount"];
+                                } else if ($key == "promotion_type") {
+                                    $payments[$index][$orderId][$itemCode][processFunction($value)] = $data[$i]["promotion_amount"];
+                                } else {
+                                    $payments[$index][$orderId][$itemCode][$key] = $value;
+                                }
+                            }
+                            $i++;
+                        }
+                        $insertData[] = array(
+                            "azSettlementId" => $settlementId,
+                            "azOrderId" => $orderId,
+                            "azItemId" => $itemCode,
+                            "azSettlementDate" => $settlementDate,
+                            "azSettlementedAmount" => (is_null($payments[$index][$orderId][$itemCode]["principal"]) ? 0 : $payments[$index][$orderId][$itemCode]["principal"]),
+                            "azGst" => (is_null($payments[$index][$orderId][$itemCode]["product_tax"]) ? 0 : $payments[$index][$orderId][$itemCode]["product_tax"]),
+                            "azTcsGst" => (is_null($payments[$index][$orderId][$itemCode]["tcs_igst"]) ? 0 : $payments[$index][$orderId][$itemCode]["tcs_igst"]),
+                            "azTds" => ((is_null($payments[$index][$orderId][$itemCode]["tds_(section_194_o)"]) ? 0 : $payments[$index][$orderId][$itemCode]["tds_(section_194_o)"])),
+                            "azShippingCharge" => (is_null($payments[$index][$orderId][$itemCode]["shipping"]) ? 0 : $payments[$index][$orderId][$itemCode]["shipping"]),
+                            "azShippingTax" => (is_null($payments[$index][$orderId][$itemCode]["shipping_tax"]) ? 0 : $payments[$index][$orderId][$itemCode]["shipping_tax"]),
+                            "azShippingDiscount" => (is_null($payments[$index][$orderId][$itemCode]["shipping_discount"]) ? 0 : $payments[$index][$orderId][$itemCode]["shipping_discount"]),
+                            "azShippingTaxDiscount" => (is_null($payments[$index][$orderId][$itemCode]["shipping_tax_discount"]) ? 0 : $payments[$index][$orderId][$itemCode]["shipping_tax_discount"]),
+                            "azHandlingCharge" => (is_null($payments[$index][$orderId][$itemCode]["fba_weight_handling_fee"]) ? 0 : $payments[$index][$orderId][$itemCode]["fba_weight_handling_fee"]),
+                            "azHandlingTax" => $payments[$index][$orderId][$itemCode]["fba_weight_handling_fee_cgst"] + $payments[$index][$orderId][$itemCode]["fba_weight_handling_fee_sgst"],
+                            "azpickPackCharge" => (is_null($payments[$index][$orderId][$itemCode]["fba_pick_pack_fee"]) ? 0 : $payments[$index][$orderId][$itemCode]["fba_pick_pack_fee"]),
+                            "azpickPackTax" => $payments[$index][$orderId][$itemCode]["fba_weight_handling_fee_cgst"] + $payments[$index][$orderId][$itemCode]["fba_weight_handling_fee_sgst"],
+                            "azCommission" => (is_null($payments[$index][$orderId][$itemCode]["commission"]) ? 0 : $payments[$index][$orderId][$itemCode]["commission"]),
+                            "azCommissionTax" => (is_null($payments[$index][$orderId][$itemCode]["commission_igst"]) ? 0 : $payments[$index][$orderId][$itemCode]["commission_igst"]),
+                            "azClosingFee" => (is_null($payments[$index][$orderId][$itemCode]["fixed_closing_fee"]) ? 0 : $payments[$index][$orderId][$itemCode]["fixed_closing_fee"]),
+                            "azClosingFeeTax" => (is_null($payments[$index][$orderId][$itemCode]["fixed_closing_fee_igst"]) ? 0 : $payments[$index][$orderId][$itemCode]["fixed_closing_fee_igst"]),
+                        );
+                    }
+                    $db->insertMulti(TBL_AZ_PAYMENTS, $insertData);
+                    // ccd($insertData);
+                    $return = array("type" => "success", "message" => "payments data successfully inserted!");
+                }
+            } catch (Exception $e) {
+                $log->write("::Insert Error: " . $e, "sp_api_request_insert_db");
+                $return = array("type" => "error", "message" => "something went wrong");
+            }
+
             echo json_encode($return);
             break;
     }
