@@ -2216,7 +2216,6 @@ if (isset($_REQUEST['action'])) {
             };
 
             $reports = $azSpObj->requestReports($report_type, "100");
-            // ccd($reports);
             try {
                 foreach ($reports["reports"] as $rpt) {
                     $fileData = $azSpObj->downloadReports($rpt["reportDocumentId"]);
@@ -2325,7 +2324,6 @@ if (isset($_REQUEST['action'])) {
                         );
                     }
                     $db->insertMulti(TBL_AZ_PAYMENTS, $insertData);
-                    // ccd($insertData);
                     $return = array("type" => "success", "message" => "payments data successfully inserted!");
                 }
             } catch (Exception $e) {

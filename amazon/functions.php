@@ -434,7 +434,7 @@ function create_order_view($order, $type, $is_return = false)
 									</div>
 									" . $rma_details . "
 									<div class='ordered-status'>
-										Product ID: <span class='bold-font'>" . implode($uids, ', ') . "</span>
+										Product ID: <span class='bold-font'>" . implode(', ', $uids) . "</span>
 									</div>
 								</div>"
 			. $claim_details .

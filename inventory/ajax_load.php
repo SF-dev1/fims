@@ -54,7 +54,7 @@ if (isset($_REQUEST['action'])) {
 					$resultArray = array_map(function ($item) use ($ctnId, $current_user, $row) {
 						return [
 							"inv_id" => $item,
-							"log_type" => "moved", "log_details" => "Moved Inventory :: Carton# CTN" . sprintf('%09d', $ctnId) . " :: Box# BOX" .sprintf('%09d', $row["boxId"]), "user_id" => $current_user["userID"]
+							"log_type" => "moved", "log_details" => "Moved Inventory :: Carton# CTN" . sprintf('%09d', $ctnId) . " :: Box# BOX" . sprintf('%09d', $row["boxId"]), "user_id" => $current_user["userID"]
 						];
 					}, $invIds);
 				}
@@ -862,6 +862,10 @@ if (isset($_REQUEST['action'])) {
 				if ($current_status == "qc_cooling") {
 					$inv_status = 'qc_verified';
 					$log_details = 'QC Verified';
+				} else if ($category != "Watches") {
+					$inv_status = 'qc_verified';
+					$log_details = 'QC Verified';
+					$colling_period = "";
 				} else {
 					$inv_status = 'qc_cooling';
 					$colling_period = "";
@@ -949,9 +953,9 @@ if (isset($_REQUEST['action'])) {
 				"userId" => $current_user['userID']
 			);
 			if ($db->insert(TBL_PROCESS_LOG, $data))
-					echo json_encode(array('type' => 'success', 'message' => "Product successfully sidelined"));
-				else
-					echo json_encode(array('type' => 'error', 'message' => 'Log Error : ' . $db->getLastError()));
+				echo json_encode(array('type' => 'success', 'message' => "Product successfully sidelined"));
+			else
+				echo json_encode(array('type' => 'error', 'message' => 'Log Error : ' . $db->getLastError()));
 			break;
 			break;
 		case 'update_uid_repairs':
@@ -992,7 +996,7 @@ if (isset($_REQUEST['action'])) {
 				"userId" => $current_user['userID']
 			);
 			$log_status = $db->insert(TBL_PROCESS_LOG, $data);
-			
+
 			if ($stockist->update_inventory_status($inv_id, $status)) {
 				$return = array('type' => 'success', 'msg' => 'Successfully updated inventory status');
 			} else {
@@ -1596,7 +1600,7 @@ if (isset($_REQUEST['action'])) {
 				if ($status_uids) {
 					$response = array();
 					foreach ($status_uids as $status_uid) {
-						$tags = json_decode($status_uid['inv_audit_tag'], true);
+						$tags = empty(json_decode($status_uid['inv_audit_tag'], true)) ? [] : json_decode($status_uid['inv_audit_tag'], true);
 						$badge = 'outline';
 						if (in_array($current_audit_tag, $tags))
 							$badge = 'success';
@@ -1696,8 +1700,7 @@ if (isset($_REQUEST['action'])) {
 				$uids = array_column($inventories, 'inv_id');
 			}
 
-			$return = array(
-			);
+			$return = array();
 			if ($uids) {
 				$i = 0;
 				foreach ($uids as $uid) {
@@ -1729,7 +1732,7 @@ if (isset($_REQUEST['action'])) {
 			} else {
 				$return['not_found'][] = $uid;
 			}
-			echo json_encode(array('type' => 'success', 'msg' => $inv_id.' scanned successfully', 'status' => $return));
+			echo json_encode(array('type' => 'success', 'msg' => $inv_id . ' scanned successfully', 'status' => $return));
 			break;
 
 			// ANALYTICS

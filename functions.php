@@ -1906,6 +1906,90 @@ function menu_items()
 						),
 					),
 				),
+				"meesho" => array(
+					"title" => "Meesho",
+					"icon" => "fab fa-maxcdn",
+					"href" => "javascript:;",
+					"sub-menu" => array(
+						"ms_orders" => array(
+							"title" => "Orders",
+							"icon" => "fa fa-shopping-cart",
+							"href" => BASE_URL . "/meesho/orders.php",
+							"header" => array(
+								"css" => array(
+									"datatables/plugins/bootstrap/dataTables.bootstrap.css",
+									"select2/select2.css",
+									"bootstrap-datepicker/css/datepicker.css",
+									"bootstrap-daterangepicker/daterangepicker-bs3.css",
+								),
+							),
+							"footer" => array(
+								"plugins" => array(
+									"datatables/media/js/jquery.dataTables-1.10.20.min.js?v=" . $js_version,
+									"datatables/plugins/bootstrap/dataTables.bootstrap.js?v=" . $js_version,
+									"select2/select2.min.js?v=" . $js_version,
+									"bootstrap-daterangepicker/moment.min.js?v=" . $js_version,
+									"bootstrap-daterangepicker/daterangepicker.js?v=" . $js_version,
+								),
+								"scripts" => array(
+									"meesho.js?v=" . $js_version
+								),
+								"init" => array(
+									"Meesho.init('orders');",
+								),
+							),
+						),
+						"ms_returns" => array(
+							"title" => "Returns",
+							"icon" => "fa fa-reply-all",
+							"href" => BASE_URL . "/meesho/returns.php",
+							"header" => array(
+								"css" => array(
+									"datatables/plugins/bootstrap/dataTables.bootstrap.css",
+									"select2/select2.css",
+									"bootstrap-datepicker/css/datepicker.css",
+									"bootstrap-daterangepicker/daterangepicker-bs3.css",
+									"bootstrap-fileinput/bootstrap-fileinput.css"
+								),
+							),
+							"footer" => array(
+								"plugins" => array(
+									"datatables/media/js/jquery.dataTables-1.10.20.min.js?v=" . $js_version,
+									"datatables/plugins/bootstrap/dataTables.bootstrap.js?v=" . $js_version,
+									"select2/select2.min.js?v=" . $js_version,
+									"jquery-validation/js/jquery.validate.min.js?v=" . $js_version,
+									"jquery-inputmask/jquery.inputmask.bundle.min.js?v=" . $js_version,
+									"bootstrap-daterangepicker/moment.min.js?v=" . $js_version,
+									"bootstrap-daterangepicker/daterangepicker.js?v=" . $js_version,
+									"bootstrap-fileinput/bootstrap-fileinput.js?v=" . $js_version
+								),
+								"scripts" => array(
+									"meesho.js?v=" . $js_version
+								),
+								"init" => array(
+									"Meesho.init('returns');",
+								),
+							),
+						),
+						"ms_scan_ship" => array(
+							"title" => "Scan & Ship",
+							"icon" => "fa fa-barcode",
+							"href" => BASE_URL . "/amazon/az_scan_ship.php",
+							"header" => array(
+								"css" => array(),
+							),
+							"footer" => array(
+								"plugins" => array(),
+								"scripts" => array(
+									"meesho.js?v=" . $js_version,
+								),
+								"init" => array(
+									"Meesho.init('scan_ship');",
+								),
+							),
+						),
+					),
+				),
 				"shopify" => array(
 					"title" => "Shopify",
 					"icon" => "fab fa-shopify",
@@ -2104,7 +2188,7 @@ function menu_items()
 				),
 				"rma" => array(
 					"title" => "RMA",
-					"icon" => "fab fa-dharmachakra",
+					"icon" => "fa fa-cogs",
 					"href" => "javascript:;",
 					"sub-menu" => array(
 						"rma_create" => array(
@@ -2280,7 +2364,7 @@ function menu_items()
 				),
 				"paytm" => array(
 					"title" => "Paytm",
-					"icon" => "fa fa-product-hunt",
+					"icon" => "fab fa-pinterest-p",
 					"href" => "javascript:;",
 					"sub-menu" => array(
 						"pt_orders" => array(
@@ -4165,7 +4249,8 @@ function get_template_element($tableName = Null)
 	return $getFirms;
 }
 
-function get_template_id_by_name($templateName){
+function get_template_id_by_name($templateName)
+{
 	global $db;
 
 	$db->where('templateName', $templateName);

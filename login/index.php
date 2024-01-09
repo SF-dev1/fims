@@ -62,7 +62,7 @@ if (isset($_POST['username'], $_POST['password'])) {
 ?>
 		<div class="content">
 			<!-- BEGIN LOGIN FORM -->
-			<?php $login_url = ($link_back != "/index.php") ? $_SERVER["PHP_SELF"] . "/?return=" . urlencode($link_back) : $_SERVER["PHP_SELF"]; ?>
+			<?php $login_url = ($link_back != "/index.php") ? $_SERVER["PHP_SELF"] . "?return=" . urlencode($link_back) : $_SERVER["PHP_SELF"]; ?>
 			<form class="login-form" action="<?php echo $login_url; ?>" method="post">
 				<h3 class="form-title">Login to your account</h3>
 				<div class="alert alert-danger display-hide">
