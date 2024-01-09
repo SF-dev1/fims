@@ -1921,13 +1921,19 @@ function menu_items()
 									"select2/select2.css",
 									"bootstrap-datepicker/css/datepicker.css",
 									"bootstrap-daterangepicker/daterangepicker-bs3.css",
+									"bootstrap-fileinput/bootstrap-fileinput.css"
 								),
 							),
 							"footer" => array(
 								"plugins" => array(
-									"datatables/media/js/jquery.dataTables-1.10.20.min.js?v=" . $js_version,
-									"datatables/plugins/bootstrap/dataTables.bootstrap.js?v=" . $js_version,
 									"select2/select2.min.js?v=" . $js_version,
+									"datatables/media/js/jquery.dataTables-1.10.20.min.js?v=" . $js_version,
+									"datatables/extensions/fixedHeader/js/dataTables.fixedHeader.min.js?v=" . $js_version,
+									"datatables/plugins/bootstrap/dataTables.bootstrap.js?v=" . $js_version,
+									"bootstrap-fileinput/bootstrap-fileinput.js?v=" . $js_version,
+									"jquery-validation/js/jquery.validate.min.js?v=" . $js_version,
+									"jquery-tags-input/jquery.tagsinput.min.js?v=" . $js_version,
+									"bootstrap-datepicker/js/bootstrap-datepicker.js?v=" . $js_version,
 									"bootstrap-daterangepicker/moment.min.js?v=" . $js_version,
 									"bootstrap-daterangepicker/daterangepicker.js?v=" . $js_version,
 								),
@@ -3465,6 +3471,7 @@ function get_all_accounts($fk_fields = array(), $fields = array())
 	// $return['paytm'] = $db->ObjectBuilder()->get(TBL_PT_ACCOUNTS, NULL, $fields);
 	$return['shopify'] = $db->ObjectBuilder()->get(TBL_SP_ACCOUNTS, NULL, $fields);
 	$return['ajio'] = $db->ObjectBuilder()->get(TBL_AJ_ACCOUNTS, NULL, $fields);
+	$return['meesho'] = $db->ObjectBuilder()->get(TBL_MS_ACCOUNTS, NULL, $fields);
 
 	return $return;
 }

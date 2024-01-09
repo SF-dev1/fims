@@ -1,6 +1,6 @@
 "use_strict";
 
-var Ajio = function () {
+var Meesho = function () {
     var currentRequest = null;
     var is_queued = false;
     var handler = "order";
@@ -65,6 +65,11 @@ var Ajio = function () {
             viewOrder_handeleTable(type, tab);
             refreshCount(handler);
         });
+
+        $("#orders-import").submit(function (event) {
+            event.preventDefault();
+
+        });
     }
 
     function viewOrder_handeleTable(type, tab) {
@@ -122,7 +127,7 @@ var Ajio = function () {
         if (handler == "return")
             var sorting_order = [1, 'asc'];
 
-        var table = $('#selectable_ajio_' + type + '_' + handler);
+        var table = $('#selectable_meesho_' + type + '_' + handler);
         var oTable;
         oTable = table.DataTable({
             responsive: true,
@@ -631,12 +636,14 @@ var Ajio = function () {
         window.setTimeout(function () {
             var s = submitForm(formData, 'GET');
             if (handler == "order") {
-                $(".portlet_pending.count").text("(" + (s.orders.pending) + ")");
-                $(".portlet_new.count").text("(" + (s.orders.new) + ")");
-                $(".portlet_packing.count").text("(" + (s.orders.packing) + ")");
-                $(".portlet_rtd.count").text("(" + (s.orders.rtd) + ")");
-                $(".portlet_shipped.count").text("(" + (s.orders.shipped) + ")");
-                $(".portlet_cancelled.count").text("(" + (s.orders.cancelled) + ")");
+                $(".portlet_panding.count").text("(" + s.orders.panding + ")");
+                $(".portlet_new.count").text("(" + s.orders.new + ")");
+                $(".portlet_packing.count").text("(" + s.orders.packing + ")");
+                $(".portlet_handovered.count").text("(" + s.orders.handovered + ")");
+                $(".portlet_shipped.count").text("(" + s.orders.shipped + ")");
+                $(".portlet_cancelled.count").text("(" + s.orders.cancelled + ")");
+                $(".portlet_delivered.count").text("(" + s.orders.delivered + ")");
+                $(".portlet_rto.count").text("(" + s.orders.rto + ")");
             } else if (handler == "return") {
                 $(".portlet_start.count").text("(" + (s.orders.start) + ")");
                 $(".portlet_in_transit.count").text("(" + (s.orders.in_transit) + ")");

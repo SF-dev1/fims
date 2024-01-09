@@ -11,13 +11,11 @@
 if (isset($_REQUEST['action'])) {
 	// including files
 	include(dirname(dirname(__FILE__)) . '/config.php');
-	include(ROOT_PATH . '/includes/connectors/ajio/ajio.php');
-	include(ROOT_PATH . '/includes/connectors/ajio/ajio-dashboard.php');
-	include(ROOT_PATH . '/ajio/functions.php');
+	include(ROOT_PATH . '/meesho/functions.php');
 	// global variables
 	global $db, $accounts, $sms, $currentUser;
-	// Ajio accounts
-	$accounts = $accounts['ajio'];
+	// Meesho accounts
+	$accounts = $accounts['meesho'];
 
 	$action = isset($_REQUEST['action']) ? $_REQUEST['action'] : "";
 	$handler = isset($_REQUEST['handler']) ? $_REQUEST['handler'] : "order";
@@ -29,10 +27,10 @@ if (isset($_REQUEST['action'])) {
 			$isReturn = ($_REQUEST['handler'] != "order") ? true : false;
 			if (!$isReturn) {
 				// New orders
-				$db->join(TBL_PRODUCTS_MASTER . " pm", "pm.sku = ajo.sellerSKU");
+				$db->join(TBL_PRODUCTS_MASTER . " pm", "pm.sku = ms.sku");
 				$order_type = isset($_REQUEST['type']) ? $_REQUEST['type'] : "new";
-				$db->where("ajo.status", $order_type);
-				$orders = $db->ObjectBuilder()->get(TBL_AJ_ORDERS . " ajo", null, "ajo.itemCode, pm.sku, pm.thumb_image_url, ajo.description, ajo.orderDate, ajo.orderStatus, ajo.orderNo, ajo.hsn, ajo.quantity, ajo.totalValue, ajo.dispatchDate, ajo.fulfillmentType, ajo.shipmentId");
+				$db->where("ms.orderState", $order_type);
+				$orders = $db->ObjectBuilder()->get(TBL_MS_ORDERS . " ms", null, "pm.sku, pm.thumb_image_url, ms.orderId, ms.meeshoOrderID, ms.orderDate, ms.orderState, ms.productName, ms.sku, ms.quantity, ms.sellerPrice, ms.discountedPrice, ms.packetId");
 			} else {
 				// returns
 				$order_type = isset($_REQUEST['type']) ? $_REQUEST['type'] : "start";
@@ -63,13 +61,17 @@ if (isset($_REQUEST['action'])) {
 			foreach ($orders as $order) {
 				$return["data"][] = create_order_view($order, $isReturn);
 			}
+			if (empty($return)) {
+				$return = array("type" => "error", "message" => "No data found in this state");
+			}
 			echo json_encode($return);
 			break;
 		case 'get_orders_count':
 			// getting orders count
 			$handler = $_GET['handler'];
 			// order types for new orders (Status)
-			$order_type = array("pending", "new", "packing", "rtd", "shipped", "cancelled");
+
+			$order_type = array("panding", "new", "packing", "handovered", "shipped", "cancelled", "delivered", "rto");
 			$is_returns = false;
 
 			if ($handler == "return") {

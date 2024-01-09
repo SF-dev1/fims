@@ -14,17 +14,15 @@ function create_order_view($order, $isReturn)
 		// view for new orders
 
 		// Total Selling Amount for order
-		$amt = ($order->totalValue) ? ($order->totalValue) : ('0.00');
+		$amt = ($order->discountedPrice) ? ($order->discountedPrice) : ('0.00');
 
 		// main content for table
 		$content = '<div class="order-content">
-			<div class="bookmark"><a class="flag" data-itemid="' . $order->itemCode . '" href="#"><i
-						class="fa fa-bookmark"></i></a>
-			</div>
+			
 			<div class="ordered-product-image"> <img src="' . IMAGE_URL . '/uploads/products/' . $order->thumb_image_url . '"
 					onerror="this.onerror=null;this.src=\'https://via.placeholder.com/100x100\';"> </div>
 			<div class="order-content-container">
-				<div class="ordered-product-name"> ' . $order->description . ' <span class="label label-success">Sylvi</span>
+				<div class="ordered-product-name"> ' . $order->productName . ' <span class="label label-success">Sylvi</span>
 				</div>
 				<div class="order-approval-container">
 					<div class="ordered-approval"> Order Date: ' . date("M d, Y", strtotime($order->orderDate)) . ' </div>
@@ -35,18 +33,12 @@ function create_order_view($order, $isReturn)
 				<div class="order-complete-details">
 					<div class="order-details">
 						<div class="order-item-block-title">ORDER DETAIL</div>
-						<div class="order-item-block">
-							<div class="order-item-field order-item-padding">Item ID </div>
-							<div class="order-item-field order-item-value">' . trim($order->itemCode) . '</div>
-						</div>
+						
 						<div class="order-item-block">
 							<div class="order-item-field order-item-padding">ID </div>
-							<div class="order-item-field order-item-value">' . trim($order->orderNo) . '</div>
+							<div class="order-item-field order-item-value">' . trim($order->meeshoOrderID) . '</div>
 						</div>
-						<div class="order-item-block">
-							<div class="order-item-field order-item-padding">HSN </div>
-							<div class="order-item-field order-item-value">' . $order->hsn . '</div>
-						</div>
+						
 						<div class="order-item-block">
 							<div class="order-item-field order-item-padding">SKU </div>
 							<div class="order-item-field order-item-value">' . $order->sku . '</div>
@@ -75,12 +67,12 @@ function create_order_view($order, $isReturn)
 						<div class="order-item-block-title">DISPATCH</div>
 						<div class="order-item-block">
 							<div class="order-item-field order-item-padding">After</div>
-							<div class="order-item-field order-item-value">' . date("M d, Y", strtotime($order->dispatchDate)) . '</div>
+							<div class="order-item-field order-item-value">' . date("M d, Y", strtotime($order->orderDate)) . '</div>
 						</div>
 						<div class="order-item-block"> <b>
 								<div class="order-item-field order-item-padding">By</div>
 								<div class="order-item-field order-item-value order-item-confirm-by-date">' .
-			date("M d, Y", strtotime($order->dispatchDate)) . '
+			date("M d, Y", strtotime($order->orderDate)) . '
 								</div>
 							</b> </div>
 					</div>
@@ -204,8 +196,8 @@ function view_orders_count($order_types, $is_return = false)
 			$orders = $db->ObjectBuilder()->get(TBL_AJ_RETURNS . ' ajr', null, "COUNT(ajr.returnOrderNo) as orders_count");
 		} else {
 			// order status
-			$db->where("ajo.status", $order_type);
-			$orders = $db->ObjectBuilder()->get(TBL_AJ_ORDERS . ' ajo', null, "COUNT(ajo.orderNo) as orders_count");
+			$db->where("ms.orderState", $order_type);
+			$orders = $db->ObjectBuilder()->get(TBL_MS_ORDERS . ' ms', null, "COUNT(ms.meeshoOrderID) as orders_count");
 		}
 		$count[$order_type] = $orders[0]->orders_count;
 	}
