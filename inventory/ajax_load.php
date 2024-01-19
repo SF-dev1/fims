@@ -870,7 +870,7 @@ if (isset($_REQUEST['action'])) {
 					$inv_status = 'qc_cooling';
 					$colling_period = "";
 					if ($category == "Watches") {
-						$colling_period = '. Cooling Period enabled.';
+						$colling_period = '. Cooling Period enabled.::Cooling Period End: ' . date("d M, Y H:i:s", strtotime("+72 hours"));
 					}
 					$log_details = 'QC In Progress' . $colling_period;
 				}
@@ -1349,6 +1349,50 @@ if (isset($_REQUEST['action'])) {
 			echo json_encode($return);
 			break;
 
+		case 'get_content_details':
+			try {
+				$number = $_GET["box_number"];
+				$ctn = (str_contains($number, "CTN") ? (int) str_replace("CTN", "", $number) : "");
+				$box = (str_contains($number, "BOX") ? (int) str_replace("BOX", "", $number) : "");
+
+				if ($ctn != "") {
+					$db->where("ctn_id", $ctn);
+					$db->orderBy("box_id");
+				} else {
+					$db->where("box_id", $box);
+				}
+				$data = $db->get(TBL_INVENTORY, null, "box_id, inv_id, inv_audit_tag");
+				$boxContent = '';
+				$current_audit_tag = get_option("current_audit_tag");
+				$ctnCount = 0;
+				for ($i = 0; $i < count($data); $i++) {
+					$box = $data[$i]["box_id"];
+					$count = 0;
+					$contentTag = "";
+					while ($box == $data[$i]["box_id"]) {
+						$tags = (isset($data[$i]['inv_audit_tag']) ? json_decode($data[$i]['inv_audit_tag'], true) : array());
+						$badge = 'outline';
+						if (in_array($current_audit_tag, $tags))
+							$badge = 'success';
+						$contentTag .= '<span class="badge badge-' . $badge . '">' . $data[$i]["inv_id"] . '</span>';
+						$i++;
+						$count++;
+						$ctnCount++;
+					}
+					$i--;
+
+					$boxContent .= '<div class="panel panel-default">
+					<div class="panel-heading">BOX' . sprintf("%09d", $box) . ' <span>&nbsp;&nbsp;&nbsp;[' . $count . ']</span></div><div class="panel-body">' . $contentTag . '</div></div>';
+				}
+				$content = '<div class="panel panel-default">
+				<div class="panel-heading"><strong>' . $number . ' &nbsp;&nbsp;&nbsp;[' . $ctnCount . ']</strong></div></div>' . $boxContent;
+
+
+				echo json_encode(["type" => "success", "content" => $content, "ctnCount" => $ctnCount]);
+			} catch (Exception $e) {
+				echo json_encode(["type" => "error", "error" => $e->getMessage()]);
+			}
+			break;
 			// SWAP
 		case 'get_swap_gnr_items':
 			$items = get_grn_items(array($_GET['grn_id']));
@@ -1664,7 +1708,7 @@ if (isset($_REQUEST['action'])) {
 			// Set Selected Cell
 			$objPHPExcel->getActiveSheet()->setSelectedCell('A1');
 
-			// Redirect output to a client’s web browser (Xlsx)
+			// Redirect output to a client's web browser (Xlsx)
 			header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
 			header('Content-Disposition: attachment;filename="' . $_GET["sku"] . '-' . date('Ymd') . '.xlsx"');
 			header('Cache-Control: max-age=0');

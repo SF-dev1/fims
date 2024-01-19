@@ -6,9 +6,10 @@
 if (isset($_REQUEST['action'])) {
     include_once(dirname(dirname(__FILE__)) . '/config.php');
     include_once(ROOT_PATH . '/includes/connectors/amazon/amazon.php');
+    include_once(ROOT_PATH . '/includes/connectors/amazon/amazon-payments.php');
     include_once(ROOT_PATH . '/amazon/functions.php');
     include_once(ROOT_PATH . '/includes/vendor/autoload.php');
-    global $db, $accounts, $log;
+    global $db, $accounts, $log, $currentUser;
 
     $accounts = $accounts['amazon'];
 
@@ -1977,203 +1978,216 @@ if (isset($_REQUEST['action'])) {
             echo json_encode($return);
             break;
         case 'request_report':
-            $account = get_current_account($_GET['account']);
+            // error_reporting(E_ALL);
+            // ini_set('display_errors', '1');
+            // echo '<pre>';
+
             $report_type = $_GET['report_type'];
-            $startdate = $_GET['startdate'];
-            $enddate = $_GET['enddate'];
+            $startdate = isset($_GET['startdate']) ? $_GET['startdate'] : date("Y-m-d"); // 2023-12-31
+            $enddate = isset($_GET['enddate']) ? $_GET['enddate'] : date("Y-m-d"); // 2023-12-31
 
-            $azSpObj = new amazon($account);
-            $reports = $azSpObj->createReport($report_type, $startdate, $enddate);
-            $reports = json_decode($reports, true);
+            if (isset($_GET["account"]))
+                $accounts = get_current_account($_GET['account']);
+            foreach ($accounts as $account) {
+                $azSpObj = new amazon($account);
+                $reports = $azSpObj->createReport($report_type, $startdate, $enddate);
+                if (!is_array($reports)) {
+                    $reports = json_decode($reports, true);
+                } else {
+                    $return = array('type' => 'error', 'msg' => 'Unable to add report details', 'response' => json_encode($reports));
+                    echo json_encode($return);
+                    exit();
+                }
 
-            $details = array();
-            $details = array(
-                'report_type' => $report_type,
-                'report_id' => $reports["reportId"],
-                'report_status' => 'submitted',
-                'account_id' => $account->account_id,
-                'createdDate' => date("Y-m-d H:i:s")
-            );
-            if ($db->insert(TBL_AZ_REPORT, $details))
-                $return = array('type' => 'success', 'msg' => 'Report requested successfuly. Report ID ' . $reports);
-            else
-                $return = array('type' => 'error', 'msg' => 'Unable to add report details', 'response' => $reports);
+                $details = array(
+                    'report_type' => $report_type,
+                    'report_id' => $reports["reportId"],
+                    'report_status' => 'submitted',
+                    'account_id' => $account->account_id,
+                    'createdDate' => date("Y-m-d H:i:s")
+                );
+                if ($db->insert(TBL_AZ_REPORT, $details))
+                    $return[$account->account_id] = array('type' => 'success', 'msg' => 'Report requested successfuly. Report ID ' . json_encode($reports));
+                else
+                    $return[$account->account_id] = array('type' => 'error', 'msg' => 'Unable to add report details', 'response' => json_encode($reports));
+            }
             echo json_encode($return);
             break;
         case 'insert_details':
-            error_reporting(E_ALL);
-            ini_set('display_errors', '1');
-            echo '<pre>';
-            $account = get_current_account($_GET['account']);
-            $db->where("account_id", $account->account_id);
-            $db->where("report_status", "submitted");
-            $reportsData = $db->get(TBL_AZ_REPORT, null, "report_id, report_type");
-            try {
-                if ($reportsData) {
-                    $azSpObj = new amazon($account);
-                    $processFunction = function ($text) {
-                        return strtolower(str_replace([' ', '-', '"', '﻿'], ['_', '_', '', ''], trim($text)));
-                    };
-                    foreach ($reportsData as $rid) {
-                        $reports = $azSpObj->getReportDocumentById($rid["report_id"]);
-                        $fileData = $azSpObj->downloadReports($reports["reportDocumentId"]);
-                        $data = array();
-                        if (isset($fileData["compressionAlgorithm"])) {
-                            if ($fileData["compressionAlgorithm"] == "GZIP") {
 
-                                $compressedData = file_get_contents($fileData["url"]);
-                                $uncompressedData = gzdecode($compressedData);
+            if (isset($_GET["account"]))
+                $accounts = get_current_account($_GET['account']);
+            foreach ($accounts as $account) {
+                $db->where("account_id", $account->account_id);
+                $db->where("report_status", "submitted");
+                $reportsData = $db->get(TBL_AZ_REPORT, null, "report_id, report_type");
+                try {
+                    if ($reportsData) {
+                        $azSpObj = new amazon($account);
+                        $processFunction = function ($text) {
+                            return strtolower(str_replace([' ', '-', '"', '﻿'], ['_', '_', '', ''], trim($text)));
+                        };
+                        foreach ($reportsData as $rid) {
+                            $reports = $azSpObj->getReportDocumentById($rid["report_id"]);
+                            $fileData = $azSpObj->downloadReports($reports["reportDocumentId"]);
+                            $data = array();
+                            if (isset($fileData["compressionAlgorithm"])) {
+                                if ($fileData["compressionAlgorithm"] == "GZIP") {
 
-                                $orders = array();
-                                $rows = explode(PHP_EOL, $uncompressedData);
-                                foreach ($rows as $row) {
-                                    $orders[] = str_getcsv($row);
-                                }
-                                $keys = $orders[0];
+                                    $compressedData = file_get_contents($fileData["url"]);
+                                    $uncompressedData = gzdecode($compressedData);
 
-                                $keys = array_map($processFunction, $keys);
-                                for ($i = 1; $i < count($orders); $i++) {
-                                    for ($j = 0; $j < count($orders[$i]); $j++) {
-                                        $data[$i - 1][$keys[$j]] = $orders[$i][$j];
+                                    $orders = array();
+                                    $rows = explode(PHP_EOL, $uncompressedData);
+                                    foreach ($rows as $row) {
+                                        $orders[] = str_getcsv($row);
                                     }
-                                }
-                            }
-                        } else {
-                            if (isset($fileData["url"])) {
-                                $rows = array();
-                                if (getUrlMimeType($fileData["url"]) == "text/plain") {
-                                    $fileStr = file_get_contents($fileData["url"]);
-                                    $rows = explode(PHP_EOL, $fileStr);
+                                    $keys = $orders[0];
 
-                                    $keys = explode("	", $rows[0]);
                                     $keys = array_map($processFunction, $keys);
-
-                                    for ($i = 1; $i < count($rows); $i++) {
-                                        $values = explode("	", $rows[$i]);
-                                        for ($j = 0; $j < count($keys); $j++) {
-                                            $data[$i - 1][$keys[$j]] = $values[$j];
-                                        }
-                                    }
-                                } else {
-                                    $file = fopen($fileData["url"], 'r');
-                                    while (($rows[] = fgetcsv($file)) != false) {
-                                    }
-                                    $keys = array_map($processFunction, $rows[0]);
-
-                                    for ($i = 1; $i < count($rows); $i++) {
-                                        for ($j = 0; $j < count($keys); $j++) {
-                                            $data[$i - 1][$keys[$j]] = $rows[$i][$j];
+                                    for ($i = 1; $i < count($orders); $i++) {
+                                        for ($j = 0; $j < count($orders[$i]); $j++) {
+                                            $data[$i - 1][$keys[$j]] = $orders[$i][$j];
                                         }
                                     }
                                 }
-                            }
-                        }
+                            } else {
+                                if (isset($fileData["url"])) {
+                                    $rows = array();
+                                    if (getUrlMimeType($fileData["url"]) == "text/plain") {
+                                        $fileStr = file_get_contents($fileData["url"]);
+                                        $rows = explode(PHP_EOL, $fileStr);
 
-                        if ($rid["report_type"] == "GET_AMAZON_FULFILLED_SHIPMENTS_DATA_GENERAL") {
-                            ccd($data);
-                            for ($i = 0; $i < count($data); $i++) {
-                                $updateData = array(
-                                    "packageId" => $data[$i]["shipment_id"],
-                                    "fulfillmentChannel" => $data[$i]["fulfillment_channel"],
-                                    "fulfilmentSite" => $data[$i]["fc"],
-                                    "orderDate" => date("Y-m-d H:i:s", strtotime($data[$i]["purchase_date"])),
-                                    "shippedDate" => date("Y-m-d H:i:s", strtotime($data[$i]["shipment_date"])),
-                                    "itemPrice" => $data[$i]["item_price"],
-                                    "itemTax" => (isset($ordedata[$i]["item_tax"]) ? $ordedata[$i]["item_tax"] : "0"),
-                                    "shippingPrice" => $data[$i]["shipping_price"],
-                                    "shippingTax" => $data[$i]["shipping_tax"],
-                                    "shippingDiscount" => $data[$i]["shipment_promo_discount"],
-                                    "shippingDiscountTax" => ($data[$i]["shipment_promo_discount"] * 0.18),
-                                    "giftWrapPrice" => $data[$i]["gift_wrap_price"],
-                                    "giftWrapTax" => $data[$i]["gift_wrap_tax"],
-                                    "promotionDiscount" => $data[$i]["item_promo_discount"],
-                                    "promotionDiscountTax" => ($data[$i]["item_promo_discount"] * 0.18),
-                                    "trackingID" => $data[$i]["tracking_number"],
-                                    "courierName" => $data[$i]["carrier"],
-                                    "quantity" => $data[$i]["shipped_quantity"],
-                                    "orderItemId" => $data[$i]["amazon_order_item_id"],
-                                    "shipServiceLevel" => $data[$i]["ship_service_level"],
-                                );
-                                $db->where("orderId", $data[$i]["amazon_order_id"]);
-                                if ($db->has(TBL_AZ_ORDERS)) {
-                                    $db->where("orderId", $data[$i]["amazon_order_id"]);
-                                    if ($db->update(TBL_AZ_ORDERS, $updateData)) {
-                                        $db->where("report_id", $rid["report_id"]);
-                                        $db->update(TBL_AZ_REPORT, ["report_status" => "insert_completed"]);
+                                        $keys = explode("	", $rows[0]);
+                                        $keys = array_map($processFunction, $keys);
+
+                                        for ($i = 1; $i < count($rows); $i++) {
+                                            $values = explode("	", $rows[$i]);
+                                            for ($j = 0; $j < count($keys); $j++) {
+                                                $data[$i - 1][$keys[$j]] = $values[$j];
+                                            }
+                                        }
                                     } else {
-                                        $log->write("::Data update failed :: Data: " . $updateData, "amazon-orders");
+                                        $file = fopen($fileData["url"], 'r');
+                                        while (($rows[] = fgetcsv($file)) != false) {
+                                        }
+                                        $keys = array_map($processFunction, $rows[0]);
+
+                                        for ($i = 1; $i < count($rows); $i++) {
+                                            for ($j = 0; $j < count($keys); $j++) {
+                                                $data[$i - 1][$keys[$j]] = $rows[$i][$j];
+                                            }
+                                        }
                                     }
-                                } else {
-                                    echo "Else Part";
                                 }
                             }
-                        } else if ($rid["report_type"] == "GET_FBA_FULFILLMENT_CUSTOMER_RETURNS_DATA") {
-                            for ($i = 0; $i < count($data); $i++) {
-                                $rSource = "CUSTOMER_RETURN";
-                                if ($data[$i]["reason"] = "UNDELIVERABLE_REFUSED" || $data[$i]["reason"] = "UNDELIVERABLE_UNKNOWN" || $data[$i]["reason"] = "NEVER_ARRIVED")
-                                    $rSource = "UNDELIVERED";
-                                $updateData = array(
-                                    "orderId" => $data[$i]["order_id"],
-                                    "shipmentId" => $data[$i]["license_plate_number"],
-                                    "rSource" => $rSource,
-                                    "rStatus" => "return_completed",
-                                    "rReason" => $data[$i]["reason"],
-                                    "rQty" => $data[$i]["quantity"],
-                                    "rShipmentStatus" => "return_completed",
-                                    "rCourierName" => "ATSIN",
-                                    "rASIN" => $data[$i]["asin"],
-                                    "rCreatedDate" => date("Y-m-d H:i:s", strtotime("yesterday")),
-                                    "rUpdatedDate" => date("Y-m-d H:i:s", strtotime($data[$i]["return_date"])),
-                                    "rExpectedDate" => date("Y-m-d H:i:s", strtotime($data[$i]["return_date"])),
-                                    "rDeliveredDate" => date("Y-m-d H:i:s", strtotime($data[$i]["return_date"])),
-                                    "rCreatedDate" => date("Y-m-d H:i:s", strtotime($data[$i]["return_date"]))
-                                );
-                                $db->where("orderId", $data[$i]["amazon_order_id"]);
-                                if ($db->has(TBL_AZ_RETURNS)) {
+
+                            if ($rid["report_type"] == "GET_AMAZON_FULFILLED_SHIPMENTS_DATA_GENERAL") {
+                                for ($i = 0; $i < count($data); $i++) {
+                                    $updateData = array(
+                                        "packageId" => $data[$i]["shipment_id"],
+                                        "fulfillmentChannel" => $data[$i]["fulfillment_channel"],
+                                        "fulfilmentSite" => (isset($data[$i]["fc"]) ? $data[$i]["fc"] : (isset($data[$i]["fulfillment_site"]) ? $data[$i]["fulfillment_site"] : "ZWCI")),
+                                        "orderDate" => date("Y-m-d H:i:s", strtotime($data[$i]["purchase_date"])),
+                                        "shippedDate" => date("Y-m-d H:i:s", strtotime($data[$i]["shipment_date"])),
+                                        "itemPrice" => $data[$i]["item_price"],
+                                        "itemTax" => (isset($ordedata[$i]["item_tax"]) ? $ordedata[$i]["item_tax"] : ($data[$i]["item_price"] * 0.18)),
+                                        "shippingPrice" => $data[$i]["shipping_price"],
+                                        "shippingTax" => $data[$i]["shipping_tax"],
+                                        "shippingDiscount" => $data[$i]["ship_promotion_discount"],
+                                        "shippingDiscountTax" => ($data[$i]["ship_promotion_discount"] * 0.18),
+                                        "giftWrapPrice" => $data[$i]["gift_wrap_price"],
+                                        "giftWrapTax" => $data[$i]["gift_wrap_tax"],
+                                        "promotionDiscount" => $data[$i]["item_promotion_discount"],
+                                        "promotionDiscountTax" => ($data[$i]["item_promotion_discount"] * 0.18),
+                                        "trackingID" => $data[$i]["tracking_number"],
+                                        "shippingAddress" => json_encode(array("City" => $data[$i]["ship_city"], "StateOrRegion" => $data[$i]["ship_state"], "PostalCode" => $data[$i]["ship_postal_code"], "CountryCode" => $data[$i]["ship_country"])),
+                                        "courierName" => $data[$i]["carrier"],
+                                        "quantity" => $data[$i]["quantity_shipped"],
+                                        "orderItemId" => $data[$i]["amazon_order_item_id"],
+                                        "shipServiceLevel" => $data[$i]["ship_service_level"],
+                                    );
                                     $db->where("orderId", $data[$i]["amazon_order_id"]);
-                                    if ($db->update(TBL_AZ_RETURNS, $updateData)) {
-                                        echo $data[$i]["amazon_order_id"] . "<br>";
-                                        $db->where("report_id", $rid["report_id"]);
-                                        $db->update(TBL_AZ_REPORT, ["report_status" => "insert_completed"]);
+                                    if ($db->has(TBL_AZ_ORDERS)) {
+                                        $db->where("orderId", $data[$i]["amazon_order_id"]);
+                                        if ($db->update(TBL_AZ_ORDERS, $updateData)) {
+                                            $db->where("report_id", $rid["report_id"]);
+                                            $db->update(TBL_AZ_REPORT, ["report_status" => "insert_completed"]);
+                                        } else {
+                                            $log->write("::Data update failed :: Data: " . $updateData, "amazon-orders");
+                                        }
                                     } else {
-                                        $log->write("::Data update failed :: Data: " . $updateData, "amazon-orders");
+                                        echo "Else Part";
                                     }
-                                } else {
-                                    $db->insert(TBL_AZ_RETURNS, $updateData);
                                 }
-                            }
-                        } else if ($rid["report_type"] == "GET_FBA_REIMBURSEMENTS_DATA") {
-                            for ($i = 0; $i < count($data); $i++) {
-                                $updateData = array(
-                                    "orderId" => $data[$i]["amazon_order_id"],
-                                    "claimId" => $data[$i]["case_id"],
-                                    "claimStatus" => "resolved",
-                                    "claimStatusAZ" => "resolved",
-                                    "claimComments" => "FBA Reimbursement Id: " . $data[$i]["reimbursement_id"] . " (System)",
-                                    "claimReimbursmentAmount" => $data[$i]["amount_total"],
-                                    "claimNotes" => $data[$i]["reason"],
-                                    "claimProductCondition" => $data[$i]["condition"],
-                                    "createdBy" => "00",
-                                    "createdBy" => "00",
-                                    "createdDate" => date("Y-m-d H:i:s", strtotime("approval_date")),
-                                    "closedDate" => date("Y-m-d H:i:s", strtotime($data[$i]["approval_date"])),
-                                    "updatedDate" => date("Y-m-d H:i:s", strtotime($data[$i]["approval_date"]))
-                                );
-                                $db->insert(TBL_AZ_CLAIMS, $updateData);
+                            } else if ($rid["report_type"] == "GET_FBA_FULFILLMENT_CUSTOMER_RETURNS_DATA") {
+                                for ($i = 0; $i < count($data); $i++) {
+                                    $rSource = "CUSTOMER_RETURN";
+                                    if ($data[$i]["reason"] = "UNDELIVERABLE_REFUSED" || $data[$i]["reason"] = "UNDELIVERABLE_UNKNOWN" || $data[$i]["reason"] = "NEVER_ARRIVED")
+                                        $rSource = "UNDELIVERED";
+                                    $updateData = array(
+                                        "orderId" => $data[$i]["order_id"],
+                                        "shipmentId" => $data[$i]["license_plate_number"],
+                                        "rSource" => $rSource,
+                                        "rStatus" => "return_completed",
+                                        "rReason" => $data[$i]["reason"],
+                                        "rQty" => $data[$i]["quantity"],
+                                        "rShipmentStatus" => "return_completed",
+                                        "rCourierName" => "ATSIN",
+                                        "rASIN" => $data[$i]["asin"],
+                                        "rCreatedDate" => date("Y-m-d H:i:s", strtotime("yesterday")),
+                                        "rUpdatedDate" => date("Y-m-d H:i:s", strtotime($data[$i]["return_date"])),
+                                        "rExpectedDate" => date("Y-m-d H:i:s", strtotime($data[$i]["return_date"])),
+                                        "rDeliveredDate" => date("Y-m-d H:i:s", strtotime($data[$i]["return_date"])),
+                                        "rCreatedDate" => date("Y-m-d H:i:s", strtotime($data[$i]["return_date"]))
+                                    );
+                                    $db->where("orderId", $data[$i]["amazon_order_id"]);
+                                    if ($db->has(TBL_AZ_RETURNS)) {
+                                        $db->where("orderId", $data[$i]["amazon_order_id"]);
+                                        if ($db->update(TBL_AZ_RETURNS, $updateData)) {
+                                            echo $data[$i]["amazon_order_id"] . "<br>";
+                                            $db->where("report_id", $rid["report_id"]);
+                                            $db->update(TBL_AZ_REPORT, ["report_status" => "insert_completed"]);
+                                        } else {
+                                            $log->write("::Data update failed :: Data: " . $updateData, "amazon-orders");
+                                        }
+                                    } else {
+                                        $db->insert(TBL_AZ_RETURNS, $updateData);
+                                    }
+                                }
+                            } else if ($rid["report_type"] == "GET_FBA_REIMBURSEMENTS_DATA") {
+                                for ($i = 0; $i < count($data); $i++) {
+                                    $updateData = array(
+                                        "orderId" => $data[$i]["amazon_order_id"],
+                                        "claimId" => $data[$i]["case_id"],
+                                        "claimStatus" => "resolved",
+                                        "claimStatusAZ" => "resolved",
+                                        "claimComments" => "FBA Reimbursement Id: " . $data[$i]["reimbursement_id"] . " (System)",
+                                        "claimReimbursmentAmount" => $data[$i]["amount_total"],
+                                        "claimNotes" => $data[$i]["reason"],
+                                        "claimProductCondition" => $data[$i]["condition"],
+                                        "createdBy" => "00",
+                                        "createdBy" => "00",
+                                        "createdDate" => date("Y-m-d H:i:s", strtotime("approval_date")),
+                                        "closedDate" => date("Y-m-d H:i:s", strtotime($data[$i]["approval_date"])),
+                                        "updatedDate" => date("Y-m-d H:i:s", strtotime($data[$i]["approval_date"]))
+                                    );
+                                    $db->insert(TBL_AZ_CLAIMS, $updateData);
+                                }
                             }
                         }
                     }
+                    echo json_encode(["type" => "success"]);
+                } catch (Exception $e) {
+                    echo json_encode(["type" => "error"]);
+                    $log->write("::Amazon data update error: " . $e);
                 }
-                echo json_encode(["type" => "success"]);
-            } catch (Exception $e) {
-                echo json_encode(["type" => "error"]);
-                $log->write("::Amazon data update error: " . $e);
             }
             break;
         case 'insert_past_data':
-            error_reporting(E_ALL);
-            ini_set('display_errors', '1');
-            echo '<pre>';
+            // error_reporting(E_ALL);
+            // ini_set('display_errors', '1');
+            // echo '<pre>';
             $account = get_current_account($_GET['account']);
             $azSpObj = new amazon($account);
             $report_type = $_GET['report_type'];
@@ -2202,133 +2216,605 @@ if (isset($_REQUEST['action'])) {
             }
             echo json_encode($return);
             break;
-        case 'insert_payments':
-            error_reporting(E_ALL);
-            ini_set('display_errors', '1');
-            echo '<pre>';
-            $account = get_current_account($_GET['account']);
-            $azSpObj = new amazon($account);
-            $report_type = "GET_V2_SETTLEMENT_REPORT_DATA_FLAT_FILE";
-
+        case 'insert_past_payments':
+            // error_reporting(E_ALL);
+            // ini_set('display_errors', '1');
+            // echo '<pre>';
             function processFunction($text)
             {
-                return strtolower(str_replace([' ', '-', '"', '﻿', '_&'], ['_', '_', '', '', ''], trim($text)));
+                return strtolower(str_replace([' ', '-', '"', '﻿'], ['_', '_', '', ''], trim($text)));
             };
+            $handle = new \Verot\Upload\Upload($_FILES['payments_file']);
+            $account = $_REQUEST["account_id"];
 
-            $reports = $azSpObj->requestReports($report_type, "100");
-            try {
-                foreach ($reports["reports"] as $rpt) {
-                    $fileData = $azSpObj->downloadReports($rpt["reportDocumentId"]);
+            if ($handle->uploaded) {
+                $handle->file_overwrite = true;
+                $handle->dir_auto_create = true;
+                $handle->process(ROOT_PATH . "/uploads/payment_sheets/");
+                $handle->clean();
+                $filePath = ROOT_PATH . "/uploads/payment_sheets/" . $handle->file_dst_name;
+            } else {
+                echo json_encode(array('error' => 'Unable to upload file'));
+            }
 
-                    $data = array();
-                    if (isset($fileData["compressionAlgorithm"])) {
-                        if ($fileData["compressionAlgorithm"] == "GZIP") {
+            $data = array();
+            if (isset($filePath)) {
+                $rows = array();
+                if (getUrlMimeType($filePath) == "text/plain") {
+                    $fileStr = file_get_contents($filePath);
+                    $rows = explode(PHP_EOL, $fileStr);
 
-                            $compressedData = file_get_contents($fileData["url"]);
-                            $uncompressedData = gzdecode($compressedData);
+                    $keys = explode("	", $rows[0]);
+                    $keys = array_map("processFunction", $keys);
 
-                            $orders = array();
-                            $rows = explode(PHP_EOL, $uncompressedData);
-                            foreach ($rows as $row) {
-                                $orders[] = str_getcsv($row);
-                            }
-                            $keys = $orders[0];
-
-                            $keys = array_map("processFunction", $keys);
-                            for ($i = 1; $i < count($orders); $i++) {
-                                for ($j = 0; $j < count($orders[$i]); $j++) {
-                                    $data[$i - 1][$keys[$j]] = $orders[$i][$j];
-                                }
-                            }
-                        }
-                    } else {
-                        if (isset($fileData["url"])) {
-                            $rows = array();
-                            if (getUrlMimeType($fileData["url"]) == "text/plain") {
-                                $fileStr = file_get_contents($fileData["url"]);
-                                $rows = explode(PHP_EOL, $fileStr);
-
-                                $keys = explode("	", $rows[0]);
-                                $keys = array_map("processFunction", $keys);
-
-                                for ($i = 1; $i < count($rows); $i++) {
-                                    $values = explode("	", $rows[$i]);
-                                    for ($j = 0; $j < count($keys); $j++) {
-                                        $data[$i - 1][$keys[$j]] = $values[$j];
-                                    }
-                                }
-                            } else {
-                                $file = fopen($fileData["url"], 'r');
-                                while (($rows[] = fgetcsv($file)) != false) {
-                                }
-                                $keys = array_map("processFunction", $rows[0]);
-
-                                for ($i = 1; $i < count($rows); $i++) {
-                                    for ($j = 0; $j < count($keys); $j++) {
-                                        $data[$i - 1][$keys[$j]] = $rows[$i][$j];
-                                    }
-                                }
-                            }
+                    for ($i = 1; $i < count($rows); $i++) {
+                        $values = explode("	", $rows[$i]);
+                        for ($j = 0; $j < count($keys); $j++) {
+                            $data[$i - 1][$keys[$j]] = $values[$j];
                         }
                     }
-
-                    $settlementDate = $data[0]["deposit_date"];
-                    $settlementId = $data[0]["settlement_id"];
-                    $totalSettledAmount = $data[0]["total_amount"];
-
-                    $payments = array();
-                    $insertData = array();
-
-                    for ($i = 1; $i < count($data); $i++) {
-                        $orderId = $data[$i]["order_id"];
-                        $itemCode = $data[$i]["order_item_code"];
-
-                        $index = $i;
-                        while ($orderId == $data[$i]["order_id"]) {
-                            $payments[$index][$orderId][$itemCode]["gst"] = 0;
-                            foreach ($data[$i] as $key => $value) {
-
-                                if ($key == "price_type") {
-                                    $payments[$index][$orderId][$itemCode][processFunction($value)] = $data[$i]["price_amount"];
-                                } else if ($key == "item_related_fee_type") {
-                                    $payments[$index][$orderId][$itemCode][processFunction($value)] = $data[$i]["item_related_fee_amount"];
-                                } else if ($key == "promotion_type") {
-                                    $payments[$index][$orderId][$itemCode][processFunction($value)] = $data[$i]["promotion_amount"];
-                                } else {
-                                    $payments[$index][$orderId][$itemCode][$key] = $value;
-                                }
-                            }
-                            $i++;
-                        }
-                        $insertData[] = array(
-                            "azSettlementId" => $settlementId,
-                            "azOrderId" => $orderId,
-                            "azItemId" => $itemCode,
-                            "azSettlementDate" => $settlementDate,
-                            "azSettlementedAmount" => (is_null($payments[$index][$orderId][$itemCode]["principal"]) ? 0 : $payments[$index][$orderId][$itemCode]["principal"]),
-                            "azGst" => (is_null($payments[$index][$orderId][$itemCode]["product_tax"]) ? 0 : $payments[$index][$orderId][$itemCode]["product_tax"]),
-                            "azTcsGst" => (is_null($payments[$index][$orderId][$itemCode]["tcs_igst"]) ? 0 : $payments[$index][$orderId][$itemCode]["tcs_igst"]),
-                            "azTds" => ((is_null($payments[$index][$orderId][$itemCode]["tds_(section_194_o)"]) ? 0 : $payments[$index][$orderId][$itemCode]["tds_(section_194_o)"])),
-                            "azShippingCharge" => (is_null($payments[$index][$orderId][$itemCode]["shipping"]) ? 0 : $payments[$index][$orderId][$itemCode]["shipping"]),
-                            "azShippingTax" => (is_null($payments[$index][$orderId][$itemCode]["shipping_tax"]) ? 0 : $payments[$index][$orderId][$itemCode]["shipping_tax"]),
-                            "azShippingDiscount" => (is_null($payments[$index][$orderId][$itemCode]["shipping_discount"]) ? 0 : $payments[$index][$orderId][$itemCode]["shipping_discount"]),
-                            "azShippingTaxDiscount" => (is_null($payments[$index][$orderId][$itemCode]["shipping_tax_discount"]) ? 0 : $payments[$index][$orderId][$itemCode]["shipping_tax_discount"]),
-                            "azHandlingCharge" => (is_null($payments[$index][$orderId][$itemCode]["fba_weight_handling_fee"]) ? 0 : $payments[$index][$orderId][$itemCode]["fba_weight_handling_fee"]),
-                            "azHandlingTax" => $payments[$index][$orderId][$itemCode]["fba_weight_handling_fee_cgst"] + $payments[$index][$orderId][$itemCode]["fba_weight_handling_fee_sgst"],
-                            "azpickPackCharge" => (is_null($payments[$index][$orderId][$itemCode]["fba_pick_pack_fee"]) ? 0 : $payments[$index][$orderId][$itemCode]["fba_pick_pack_fee"]),
-                            "azpickPackTax" => $payments[$index][$orderId][$itemCode]["fba_weight_handling_fee_cgst"] + $payments[$index][$orderId][$itemCode]["fba_weight_handling_fee_sgst"],
-                            "azCommission" => (is_null($payments[$index][$orderId][$itemCode]["commission"]) ? 0 : $payments[$index][$orderId][$itemCode]["commission"]),
-                            "azCommissionTax" => (is_null($payments[$index][$orderId][$itemCode]["commission_igst"]) ? 0 : $payments[$index][$orderId][$itemCode]["commission_igst"]),
-                            "azClosingFee" => (is_null($payments[$index][$orderId][$itemCode]["fixed_closing_fee"]) ? 0 : $payments[$index][$orderId][$itemCode]["fixed_closing_fee"]),
-                            "azClosingFeeTax" => (is_null($payments[$index][$orderId][$itemCode]["fixed_closing_fee_igst"]) ? 0 : $payments[$index][$orderId][$itemCode]["fixed_closing_fee_igst"]),
-                        );
+                } else {
+                    $file = fopen($filePath, 'r');
+                    while (($rows[] = fgetcsv($file)) != false) {
                     }
-                    $db->insertMulti(TBL_AZ_PAYMENTS, $insertData);
-                    $return = array("type" => "success", "message" => "payments data successfully inserted!");
+                    $keys = array_map("processFunction", $rows[0]);
+
+                    for ($i = 1; $i < count($rows); $i++) {
+                        for ($j = 0; $j < count($keys); $j++) {
+                            $data[$i - 1][$keys[$j]] = $rows[$i][$j];
+                        }
+                    }
                 }
-            } catch (Exception $e) {
-                $log->write("::Insert Error: " . $e, "sp_api_request_insert_db");
-                $return = array("type" => "error", "message" => "something went wrong");
+            }
+
+            $settlementDate = str_replace(".", "-", $data[0]["deposit_date"]);
+            $settlementId = $data[0]["settlement_id"];
+
+            $payments = array();
+            $insertData = array();
+
+            for ($i = 1; $i < count($data); $i++) {
+                $orderId = $data[$i]["order_id"];
+                $itemCode = $data[$i]["order_item_code"];
+
+                $index = $i;
+                while ($orderId == $data[$i]["order_id"]) {
+                    $payments[$index][$orderId][$itemCode]["gst"] = 0;
+                    foreach ($data[$i] as $key => $value) {
+
+                        if ($key == "amount_description") {
+                            $payments[$index][$orderId][$itemCode][processFunction($value)] = $data[$i]["amount"];
+                        } else if ($key == "item_related_fee_type") {
+                            $payments[$index][$orderId][$itemCode][processFunction($value)] = $data[$i]["item_related_fee_amount"];
+                        } else if ($key == "promotion_type") {
+                            $payments[$index][$orderId][$itemCode][processFunction($value)] = $data[$i]["promotion_amount"];
+                        } else {
+                            $payments[$index][$orderId][$itemCode][$key] = $value;
+                        }
+                    }
+                    $i++;
+                }
+                // ccd($payments);
+                $insertData[] = array(
+                    "settlementId" => $settlementId,
+                    "accountId" => $account,
+                    "orderId" => $orderId,
+                    "itemId" => $itemCode,
+                    "settlementDate" => date("Y-m-d H:i:s", strtotime($settlementDate)),
+                    "salesAmount" => (is_null($payments[$index][$orderId][$itemCode]["principal"]) ? 0 : $payments[$index][$orderId][$itemCode]["principal"]),
+                    "salesGst" => (is_null($payments[$index][$orderId][$itemCode]["product_tax"]) ? 0 : $payments[$index][$orderId][$itemCode]["product_tax"]),
+                    "tcs" => (is_null($payments[$index][$orderId][$itemCode]["tcs_igst"]) ? 0 : $payments[$index][$orderId][$itemCode]["tcs_igst"]),
+                    "tds" => ((is_null($payments[$index][$orderId][$itemCode]["tds_(section_194_o)"]) ? 0 : $payments[$index][$orderId][$itemCode]["tds_(section_194_o)"])),
+                    "shippingCharge" => (is_null($payments[$index][$orderId][$itemCode]["shipping"]) ? 0 : $payments[$index][$orderId][$itemCode]["shipping"]),
+                    "shippingTax" => (is_null($payments[$index][$orderId][$itemCode]["shipping_tax"]) ? 0 : $payments[$index][$orderId][$itemCode]["shipping_tax"]),
+                    "shippingDiscount" => (is_null($payments[$index][$orderId][$itemCode]["shipping_discount"]) ? 0 : $payments[$index][$orderId][$itemCode]["shipping_discount"]),
+                    "shippingTaxDiscount" => (is_null($payments[$index][$orderId][$itemCode]["shipping_tax_discount"]) ? 0 : $payments[$index][$orderId][$itemCode]["shipping_tax_discount"]),
+                    "handlingCharge" => (is_null($payments[$index][$orderId][$itemCode]["fba_weight_handling_fee"]) ? 0 : $payments[$index][$orderId][$itemCode]["fba_weight_handling_fee"]),
+                    "handlingTax" => $payments[$index][$orderId][$itemCode]["fba_weight_handling_fee_cgst"] + $payments[$index][$orderId][$itemCode]["fba_weight_handling_fee_sgst"],
+                    "pickPackCharge" => (is_null($payments[$index][$orderId][$itemCode]["fba_pick_pack_fee"]) ? 0 : $payments[$index][$orderId][$itemCode]["fba_pick_pack_fee"]),
+                    "pickPackTax" => $payments[$index][$orderId][$itemCode]["fba_pick_pack_fee_cgst"] + $payments[$index][$orderId][$itemCode]["fba_pick_pack_fee_sgst"],
+                    "commission" => (is_null($payments[$index][$orderId][$itemCode]["commission"]) ? 0 : $payments[$index][$orderId][$itemCode]["commission"]),
+                    "commissionTax" => (is_null($payments[$index][$orderId][$itemCode]["commission_igst"]) ? 0 : $payments[$index][$orderId][$itemCode]["commission_igst"]),
+                    "closingFee" => (is_null($payments[$index][$orderId][$itemCode]["fixed_closing_fee"]) ? 0 : $payments[$index][$orderId][$itemCode]["fixed_closing_fee"]),
+                    "closingFeeTax" => (is_null($payments[$index][$orderId][$itemCode]["fixed_closing_fee_igst"]) ? 0 : $payments[$index][$orderId][$itemCode]["fixed_closing_fee_igst"]),
+                );
+            }
+
+            if ($db->insertMulti(TBL_AZ_PAYMENTS, $insertData)) {
+                $return = array("type" => "success", "message" => "payments data successfully inserted!");
+            } else {
+                $return = array("type" => "Error", "message" => "Unable to insert", "error" => $db->getLastError());
+            }
+            // $return = insert_payments($account, $data);
+
+            echo json_encode($return);
+            break;
+        case 'insert_payments':
+            // error_reporting(E_ALL);
+            // ini_set('display_errors', '1');
+            // echo '<pre>';
+            if (isset($_GET["account"]))
+                $accounts = get_current_account($_GET['account']);
+            foreach ($accounts as $account) {
+                $azSpObj = new amazon($account);
+                $report_type = "GET_V2_SETTLEMENT_REPORT_DATA_FLAT_FILE";
+
+                function processFunction($text)
+                {
+                    return strtolower(str_replace([' ', '-', '"', '﻿', '_&'], ['_', '_', '', '', ''], trim($text)));
+                };
+
+                $reports = $azSpObj->requestReports($report_type, "100");
+                try {
+                    foreach ($reports["reports"] as $rpt) {
+                        $fileData = $azSpObj->downloadReports($rpt["reportDocumentId"]);
+
+                        $data = array();
+                        if (isset($fileData["compressionAlgorithm"])) {
+                            if ($fileData["compressionAlgorithm"] == "GZIP") {
+
+                                $compressedData = file_get_contents($fileData["url"]);
+                                $uncompressedData = gzdecode($compressedData);
+
+                                $orders = array();
+                                $rows = explode(PHP_EOL, $uncompressedData);
+                                foreach ($rows as $row) {
+                                    $orders[] = str_getcsv($row);
+                                }
+                                $keys = $orders[0];
+
+                                $keys = array_map("processFunction", $keys);
+                                for ($i = 1; $i < count($orders); $i++) {
+                                    for ($j = 0; $j < count($orders[$i]); $j++) {
+                                        $data[$i - 1][$keys[$j]] = $orders[$i][$j];
+                                    }
+                                }
+                            }
+                        } else {
+                            if (isset($fileData["url"])) {
+                                $rows = array();
+                                if (getUrlMimeType($fileData["url"]) == "text/plain") {
+                                    $fileStr = file_get_contents($fileData["url"]);
+                                    $rows = explode(PHP_EOL, $fileStr);
+
+                                    $keys = explode("	", $rows[0]);
+                                    $keys = array_map("processFunction", $keys);
+
+                                    for ($i = 1; $i < count($rows); $i++) {
+                                        $values = explode("	", $rows[$i]);
+                                        for ($j = 0; $j < count($keys); $j++) {
+                                            $data[$i - 1][$keys[$j]] = $values[$j];
+                                        }
+                                    }
+                                } else {
+                                    $file = fopen($fileData["url"], 'r');
+                                    while (($rows[] = fgetcsv($file)) != false) {
+                                    }
+                                    $keys = array_map("processFunction", $rows[0]);
+
+                                    for ($i = 1; $i < count($rows); $i++) {
+                                        for ($j = 0; $j < count($keys); $j++) {
+                                            $data[$i - 1][$keys[$j]] = $rows[$i][$j];
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        $return[$account->account_id] = insert_payments($account->account_id, $data);
+                    }
+                } catch (Exception $e) {
+                    $log->write("::Insert Error: " . $e, "sp_api_request_insert_db");
+                    $return[$account->account_id] = array("type" => "error", "message" => "something went wrong");
+                }
+            }
+
+            echo json_encode($return);
+            break;
+
+        case 'get_all_settlements':
+            // error_reporting(E_ALL);
+            // ini_set('display_errors', '1');
+            // echo '<pre>';
+            $db->join(TBL_AZ_ACCOUNTS . ' a', "a.account_id=p.accountId");
+            $db->orderBy('p.settlementDate', 'DESC');
+            $db->groupBy('p.settlementId');
+            $settlements = $db->get(TBL_AZ_PAYMENTS . ' p', null, 'settlementId,  settlementDate, a.account_name, SUM(salesAmount) as paymentTotal');
+
+            $return = array();
+            $i = 0;
+
+            foreach ($settlements as $settlement) {
+                $j = 0;
+                $return["data"][$i][] = '<a target="_blank" href="' . BASE_URL . '/flipkart/payments.php?search_by=neft_id&search_value=' . $settlement["azSettlementId"] . '">' . $settlement["settlementId"] . '<a>';
+                $return["data"][$i][] = date("d M, Y h:i a", strtotime($settlement["settlementDate"]));
+                $return["data"][$i][] = $return['data'][$i][] = '&#8377 ' . number_format((float)$settlement["paymentTotal"], 2, '.', ',');
+                $i++;
+            }
+
+            if (empty($return))
+                $return['data'] = array();
+
+            echo json_encode($return);
+            break;
+        case 'get_all_upcoming':
+            // error_reporting(E_ALL);
+            // ini_set('display_errors', '1');
+            // echo '<pre>';
+
+            $data = $db->rawQuery("SELECT bas_az_orders.*, bas_az_account.account_name FROM bas_az_orders LEFT JOIN bas_az_payments ON bas_az_orders.orderId = bas_az_payments.orderId JOIN bas_az_account ON bas_az_orders.account_id = bas_az_account.account_id WHERE bas_az_payments.orderId IS NULL LIMIT 1000");
+            // ccd($data);
+            $return  = array();
+            for ($i = 0; $i < count($data); $i++) {
+                $expAmount = $data[$i]["itemPrice"] + $data[$i]["itemTax"] - $data[$i]["shippingPrice"] - $data[$i]["shippingTax"] + $data[$i]["shippingDiscount"] + $data[$i]["shippingDiscountTax"];
+
+                $return["data"][$i] = array(
+                    $data[$i]["account_name"],
+                    $data[$i]["orderItemId"],
+                    $data[$i]["orderId"],
+                    date("d M, Y h:i a", strtotime($data[$i]["orderDate"])),
+                    date("d M, Y h:i a", strtotime($data[$i]["shippedDate"])),
+                    date("d M, Y h:i a", strtotime($data[$i]["lastUpdateAt"])),
+                    $expAmount,
+                );
+            }
+            echo json_encode($return);
+            break;
+        case 'get_all_unsettled':
+            // error_reporting(E_ALL);
+            // ini_set('display_errors', '1');
+            // echo '<pre>';
+            $db->join(TBL_AZ_ACCOUNTS . " a", "a.account_id = p.accountId");
+            $db->join(TBL_AZ_ORDERS . " o", "o.orderId = p.orderId");
+            $db->where("o.isSettled", "0");
+            $data = $db->get(TBL_AZ_PAYMENTS . " p", null, "a.account_id, a.account_name, p.*, o.orderDate, o.orderItemId, o.fulfillmentChannel, o.shippingAddress, o.fulfilmentSite, o.quantity, o.shippedDate, o.lastUpdateAt, o.itemPrice as orderItemPrice, o.itemTax as orderItemTax, o.shippingPrice as orderShipping, o.shippingTax as orderShippingTax, o.shippingDiscount as orderShippingDiscount, o.shippingDiscountTax as orderShippingDiscountTax");
+
+            $return  = array();
+
+            for ($i = 0; $i < count($data); $i++) {
+                $amazon = new AmazonPayments($data[$i]["a.account_id"]);
+
+                $expectedPayout = $amazon->calculate_actual_payout($data[$i]["orderItemId"]);
+                $settlemet = $amazon->calculate_net_settlement($data[$i]["orderItemId"]);
+                // ccd($settlemet);
+                $db->where("account_id", $data[$i]["accountId"]);
+                $accountTiers = json_decode($db->getValue(TBL_AZ_ACCOUNTS, "account_tier"), true);
+
+                $return["data"][$i] = array(
+                    $data[$i]["account_name"],
+                    $data[$i]["itemId"],
+                    $data[$i]["orderId"],
+                    date("d M, Y h:i a", strtotime($data[$i]["orderDate"])),
+                    date("d M, Y h:i a", strtotime($data[$i]["shippedDate"])),
+                    date("d M, Y h:i a", strtotime($data[$i]["lastUpdateAt"])),
+                    round($expectedPayout, 2),
+                    round($settlemet, 2),
+                    round(($settlemet - $expectedPayout), 2),
+                    $data[$i]["accountId"]
+                );
+            }
+            echo json_encode($return);
+            break;
+        case 'get_difference_details':
+            // error_reporting(E_ALL);
+            // ini_set('display_errors', '1');
+            // echo '<pre>';
+            $itemId = $_REQUEST["orderItemId"];
+            $accountId = $_REQUEST["account_id"];
+            $db->where("account_id", $accountId);
+            $account = $db->getOne(TBL_AZ_ACCOUNTS, "*");
+            $amazon = new AmazonPayments($account);
+
+            $inner_content = '';
+            $content = "";
+
+            ccd($itemId);
+            $return = $amazon->get_difference_details($itemId);
+            $orders = $return['orders'];
+            $order = (object)$return['order'];
+            $settlements = array_merge(array($return['expected_payout']), $return['settlements'], array($return['difference']));
+            $key_order = array('settlement_date', 'sale_amount', 'marketplace_fees', 'commission_fee', 'fixed_fee', 'closingFee', 'pickPackCharge', 'shipping_zone', 'shipping_fee', 'taxes', 'tcs', 'tds', 'gst', 'total');
+
+            $output_content = array();
+            foreach ($settlements as $settlement) {
+                uksort($settlement, function ($key1, $key2) use ($key_order) {
+                    return ((array_search($key1, $key_order) > array_search($key2, $key_order)) ? 1 : -1);
+                });
+                foreach ($settlement as $s_key => $s_value) {
+                    $output_content[$s_key][] = $s_value;
+                }
+            }
+
+            $j = 0;
+            $last = count($output_content['settlement_date']) - 1;
+
+            unset($output_content["commission_rate"]);
+            $inner_content = '<tbody>';
+            foreach ($output_content as $level_key => $level_value) {
+                $editables = array('settlement_date', 'sale_amount', 'commission_fee', 'commission_incentive', 'collection_fee', 'pick_and_pack_fee', 'fixed_fee', 'shipping_zone', 'shipping_fee');
+                $i = 0;
+                if ($level_key == 'settlement_date')
+                    $inner_content .= '<tr class="accordion-title-container">';
+                else if ($level_key == 'total')
+                    $inner_content .= '<tr class="net-earnings-row">';
+                else if ($level_key == 'commission_fee' || $level_key == 'fixed_fee' || $level_key == 'pick_and_pack_fee' || $level_key == 'shipping_zone' || $level_key == 'shipping_fee')
+                    $inner_content .= '<tr class="marketplace-fee-child">';
+                else if ($j == 6) // Marketplace Fees Row - Fixed at 5th position
+                    $inner_content .= '<tr class="grey-highlight marketplace-fee-row">';
+                else if ($level_key == 'tds' || $level_key == 'tcs' || $level_key == 'gst')
+                    $inner_content .= '<tr class="taxes-child">';
+                else if ($j == 10) // Taxes Fees Row - Fixed at 20th position
+                    $inner_content .= '<tr class="grey-highlight taxes-row">';
+                else
+                    $inner_content .= '<tr class="grey-highlight">';
+
+
+                $available_width = 100;
+                $width = ($available_width / ($last + 1)) >= 15 ? 15 : $available_width / ($last + 1);
+                foreach ($level_value as $value) {
+                    if ($level_key == 'settlement_date') {
+                        if ($i == 0) {
+                            $payment_type = 'Expected Payout';
+                            $available_width -= $width;
+                        } elseif ($i == $last) {
+                            $payment_type = 'Difference';
+                            $width = $available_width;
+                        } else {
+                            $payment_type = 'Settlement';
+                            $available_width -= $width;
+                        }
+
+                        $inner_content .= '
+            						<td class="transaction-data-neft" style="width:' . $width . '%">
+            							<span class="transaction-neft-value">' . $payment_type . '</span>
+            							<div class="transaction-date">
+            								' . $value . '
+            							</div>
+            						</td>';
+                    } else {
+                        if ($i == $last && !empty($value))
+                            $inner_content .= '<td>' . $value . '</td>';
+                        elseif ($i != $last)
+                            $inner_content .= '<td>' . $value . '</td>';
+                    }
+                    $i++;
+                }
+                $inner_content .= '</tr>';
+                $j++;
+            }
+            $inner_content .= '</tbody>';
+            $order = (array)$order;
+            // ccd($order);
+            $content = '<div class="product-details-transaction-container">
+	                        <div class="product-details-container">
+	                        	<div class="row product-container clearfix">
+	                        		<div class="col-md-1 product-image-container">
+	                        			<div class="product-img-holder">
+	                        				<img src="' . IMAGE_URL . '/uploads/products/' . $order["thumb_image_url"] . '" onerror="this.src=\'https://via.placeholder.com/100x100\'">
+	                        			</div>
+	                        			<div class="cod-prepaid">' . strtoupper("prepaid") . '</div>
+	                        		</div>
+	                        		<div class="col-md-10 details-holder">
+	                        			<div class="product-title">
+	                        				<a target="_blank" href="">' . $order["title"] . '</a>
+	                        			</div>
+	                        			<div class="product-order-details">
+	                        				<div class="order-details-container">
+	                        					<div class="details-col-title">
+	                        						<div class="order-title">Item ID </div>
+	                        						<div class="order-title">Status</div>
+	                        						<div class="order-title">SKU</div>
+	                        						<div class="order-title">Shipped Date </div>
+	                        						<div class="order-title">Invoice Number </div>
+	                        						<div class="order-title">Invoice Date </div>
+	                        					</div>
+	                        					<div class="details-col-value">
+	                        						<div class="heading-value"><a href="" target="_black">' . $order["itemId"] . '</a></div>
+	                        						<div class="heading-value">' . $order["az_status"] . '</div>
+	                        						<div class="heading-value">' . $order["quantity"] . ' x ' . $order["sku"] . '</div>
+	                        						<div class="heading-value">' . date('d M, Y', ($order["shipByDate"] == NULL ? strtotime($order["dispatchAfterDate"]) : strtotime($order["shipByDate"]))) . '</div>
+	                        						<div class="heading-value"></div>
+	                        						<div class="heading-value"></div>
+	                        					</div>
+	                        				</div>
+	                        			</div>
+	                        		</div>
+	                        		<div class="col-md-1 product-container-buttons text-right">
+	                        			<a data-itemid="' . $order["itemId"] . '" class="mark_settled btn btn-default btn-xs" title="Mark Settled"><i class="fa fa-check" aria-hidden="true"></i></a><br />
+	                        			<a data-itemid="' . $order["itemId"] . '" class="refresh_payout btn btn-default btn-xs" title="Refresh Payout"><i class="fa fa-recycle" aria-hidden="true"></i></a><br />
+	                        		</div>
+	                        	</div>
+	                        	<div class="settlement-notes form clearfix">
+	                        		<form class="form-horizontal form-row-seperated">
+	                        			<div class="form-group">
+	                        				<label class="control-label col-md-1">IncidentID: </label>
+	                        				<div class="col-md-3">
+	                        					<input class="form-control incidentId" name="incidentId" value="' . $order["incidentId"] . '" />
+	                        					<input type="hidden" name="account_id" value="' . $accountId . '" />
+	                        				</div>
+	                        				<div class="col-md-7">
+	                        					<input type="hidden" id="settlementNotes" name="settlementNotes" class="form-control select2" value="' . $order["claimReason"] . '">
+	                        					<input type="hidden" name="orderItemId" value="' . $order["orderItemId"] . '" />
+	                        				</div>
+	                        				<div class="col-md-1">
+	                        					<button type="submit" class="btn btn-default update_notes">Update</button>
+	                        				</div>
+	                        			</div>
+	                        		</form>
+	                        	</div>
+	                        </div>
+	                        <div class="transactions-history">
+	                        	<div class="transactions-history-details">
+	                        		<div class="transactions-accordion-container">
+	                        			<div class="transaction-table-container">
+	                        				<div class="transactions-table">
+	                        					<table class="table-head" style="margin-left: 0px; float: left;">
+	                        						<thead>
+	                        							<tr class="accordion-title-container">
+	                        								<td class="transaction-data-neft accordion-title" style="width:180px;">All Transactions</td>
+	                        							</tr>
+	                        							<tr class="grey-highlight">
+	                        								<td class="title" style="width:120px;">Sale Amount</td>
+	                        							</tr>
+	                        							<tr class="grey-highlight">
+	                        								<td class="title" style="width:120px;">Amazon Discount</td>
+	                        							</tr>
+	                        							<tr class="grey-highlight marketplace-fee-row">
+	                        								<td class="title" style="width:120px;">Marketplace Fees <i class="fa fa-chevron-down"></i></td>
+	                        							</tr>
+	                        							<tr class="marketplace-fee-child">
+	                        								<td class="title" style="width:120px;">Commission</td>
+	                        							</tr>
+	                        							<tr class="marketplace-fee-child">
+	                        								<td class="title" style="width:120px;">Fixed Fee</td>
+	                        							</tr>
+	                        							<tr class="marketplace-fee-child">
+	                        								<td class="title" style="width:120px;">Shipping Zone</td>
+	                        							</tr>
+	                        							<tr class="marketplace-fee-child">
+	                        								<td class="title" style="width:120px;">Shipping Fee</td>
+                                                        </tr>
+	                        							<tr class="grey-highlight taxes-row">
+                                                            <td class="title" style="width:120px;">Taxes <i class="fa fa-chevron-down"></i></td>
+                                                        </tr>
+	                        							</tr>
+	                        							<tr class="taxes-child">
+	                        								<td class="title" style="width:120px;">TCS</td>
+	                        							</tr>
+	                        							<tr class="taxes-child">
+	                        								<td class="title" style="width:120px;">TDS</td>
+	                        							</tr>
+	                        							<tr class="taxes-child">
+	                        								<td class="title" style="width:120px;">GST</td>
+	                        							</tr>
+	                        							<tr class="net-earnings-row">
+	                        								<td class="title">Net Earnings</td>
+	                        							</tr>
+	                        						</thead>
+	                        					</table>
+	                        					<table class="table-content">' .
+                $inner_content
+                . '</table>
+	                        				</div>
+	                        			</div>
+	                        		</div>
+	                        	</div>
+	                        </div>
+                        </div>';
+            echo json_encode(array('type' => 'success', 'data' => $content));
+            break;
+
+        case 'update_settlement_notes':
+
+            // error_reporting(E_ALL);
+            // ini_set('display_errors', '1');
+            // echo '<pre>';
+            if (empty($_REQUEST["incidentId"])) {
+                $details = array(
+                    'itemId' => $_REQUEST["orderItemId"],
+                    'status' => "pending",
+                    'reason' => $_REQUEST['settlementNotes'],
+                    'createdBy' => $_SESSION["user_id"],
+                    'accountId' => $_REQUEST['accountId'],
+                );
+
+                if ($db->insert(TBL_AZ_INCIDENTS, $details)) {
+                    echo json_encode(array('type' => 'success', 'msg' => 'Successfully updated transaction notes'));
+                } else {
+                    echo json_encode(array('type' => 'error', 'msg' => 'Unable to update details. Please try later.'));
+                }
+            } else {
+                $details = array(
+                    'caseId' => $_REQUEST["incidentId"],
+                    'itemId' => $_REQUEST["orderItemId"],
+                    'status' => "active",
+                    'reason' => $_REQUEST['settlementNotes'],
+                    'updatedBy' => $_SESSION["user_id"],
+                );
+
+                $db->where('itemId', $_REQUEST["orderItemId"]);
+                $caseId = $db->getValue(TBL_AZ_INCIDENTS, "caseId");
+                if ($caseId == null || $caseId == "") {
+                    $details['incidentNotes'] = "New Claim Id: " . $_REQUEST["incidentId"];
+                } else {
+                    $details['incidentNotes'] = "Claim Id Updated To: " . $_REQUEST["incidentId"] . " From: " . $caseId;
+                }
+
+                $db->where('itemId', $_REQUEST["orderItemId"]);
+                if ($db->update(TBL_AZ_INCIDENTS, $details)) {
+                    echo json_encode(array('type' => 'success', 'msg' => 'Successfully updated transaction notes'));
+                } else {
+                    echo json_encode(array('type' => 'error', 'msg' => 'Unable to update details. Please try later.'));
+                }
+            }
+            break;
+        case 'get_all_to_claim':
+            // error_reporting(E_ALL);
+            // ini_set('display_errors', '1');
+            // echo '<pre>';
+            $db->join(TBL_AZ_ACCOUNTS . " a", "a.account_id = ai.accountId", "LEFT");
+            $db->join(TBL_USERS . " u", "u.userID = ai.createdBy");
+            $db->where("ai.status", "pending");
+            $settlements = $db->get(TBL_AZ_INCIDENTS . " ai", null, "ai.*, u.display_name, a.account_name");
+
+            $return = array();
+            foreach ($settlements as $settlement) {
+                $return[] = array(
+                    $settlement["account_name"],
+                    $settlement["itemId"],
+                    $settlement["createdDate"],
+                    $settlement["reason"],
+                    $settlement["status"],
+                    $settlement["display_name"],
+                    $settlement["accountId"],
+                );
+            }
+
+            echo json_encode(array("type" => "success", "data" => $return));
+            break;
+        case 'get_all_disputed':
+            // error_reporting(E_ALL);
+            // ini_set('display_errors', '1');
+            // echo '<pre>';
+            $db->join(TBL_AZ_ACCOUNTS . " a", "a.account_id = ai.accountId", "LEFT");
+            $db->join(TBL_USERS . " u", "u.userID = ai.createdBy", "LEFT");
+            $db->join(TBL_USERS . " up", "up.userID = ai.updatedBy", "LEFT");
+            $db->join(TBL_AZ_ORDERS . " o", "o.orderItemId = ai.itemId", "LEFT");
+            $db->where("ai.status", "active");
+            $db->where("o.isSettled", "0");
+            $settlements = $db->get(TBL_AZ_INCIDENTS . " ai", null, "ai.*, u.display_name as createdName, up.display_name as updatedName, a.account_name");
+
+            $return = array();
+            foreach ($settlements as $settlement) {
+                $return[] = array(
+                    $settlement["account_name"],
+                    $settlement["itemId"],
+                    $settlement["caseId"],
+                    $settlement["reason"],
+                    $settlement["incidentNotes"],
+                    $settlement["status"],
+                    $settlement["createdName"],
+                    $settlement["updatedName"],
+                    $settlement["createdDate"],
+                    $settlement["updatedDate"],
+                    $settlement["closedDate"],
+                    $settlement["accountId"],
+                );
+            }
+
+            echo json_encode(array("type" => "success", "data" => $return));
+            break;
+        case 'mark_order_settled':
+            $itemId = $_REQUEST["orderItemId"];
+            $accountId = $_REQUEST["account_id"];
+
+            $details = array("isSettled" => "1");
+            $db->where("orderItemId", $itemId);
+            $db->where("account_id", $accountId);
+            if ($db->update(TBL_AZ_ORDERS, $details)) {
+                $return = array("type" => "success");
+            } else {
+                $return = array("type" => "error");
             }
 
             echo json_encode($return);

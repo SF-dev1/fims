@@ -246,6 +246,30 @@ function menu_items()
 						),
 					),
 				),
+				"content" => array(
+					"title" => "Content",
+					"href" => BASE_URL . "/inventory/content.php",
+					"header" => array(
+						"css" => array(
+							"select2/select2.css",
+							"jquery-multi-select/css/multi-select.css",
+							"bootstrap-editable/bootstrap-editable/css/bootstrap-editable.css"
+						),
+					),
+					"footer" => array(
+						"plugins" => array(
+							"bootstrap-editable/bootstrap-editable/js/bootstrap-editable.min.js?v=" . $js_version,
+							"select2/select2.min.js?v=" . $js_version,
+							"jquery-validation/js/jquery.validate.min.js?v=" . $js_version,
+						),
+						"scripts" => array(
+							"inventory.js?v=" . $js_version
+						),
+						"init" => array(
+							'Inventory.init("content");'
+						),
+					),
+				),
 				"manage" => array(
 					"title" => "Manage Inventory",
 					"href" => BASE_URL . "/inventory/manage.php",
@@ -1874,6 +1898,45 @@ function menu_items()
 								),
 								"init" => array(
 									"Amazon.init('scan_ship');",
+								),
+							),
+						),
+						"az_payments" => array(
+							"title" => "Payments",
+							"icon" => "fa fa-rupee-sign",
+							"href" => BASE_URL . "/amazon/payments.php",
+							"header" => array(
+								"css" => array(
+									"select2/select2.css",
+									"datatables/plugins/bootstrap/dataTables.bootstrap.css",
+									"datatables/extensions/fixedHeader/css/fixedHeader.dataTables.min.css",
+									"bootstrap-fileinput/bootstrap-fileinput.css",
+									"jquery-tags-input/jquery.tagsinput.css",
+									"bootstrap-datepicker/css/datepicker.css",
+									"bootstrap-daterangepicker/daterangepicker-bs3.css",
+								),
+							),
+							"footer" => array(
+								"plugins" => array(
+									"select2/select2.min.js?v=" . $js_version,
+									"datatables/media/js/jquery.dataTables-1.10.20.min.js?v=" . $js_version,
+									"datatables/extensions/fixedHeader/js/dataTables.fixedHeader.min.js?v=" . $js_version,
+									"datatables/plugins/bootstrap/dataTables.bootstrap.js?v=" . $js_version,
+									"bootstrap-fileinput/bootstrap-fileinput.js?v=" . $js_version,
+									"jquery-validation/js/jquery.validate.min.js?v=" . $js_version,
+									"jquery-tags-input/jquery.tagsinput.min.js?v=" . $js_version,
+									"bootstrap-datepicker/js/bootstrap-datepicker.js?v=" . $js_version,
+									"bootstrap-daterangepicker/moment.min.js?v=" . $js_version,
+									"bootstrap-daterangepicker/daterangepicker.js?v=" . $js_version,
+								),
+								"scripts" => array(
+									"amazon.js?v=" . $js_version => array(
+										// 'var accounts = ' . json_encode(get_all_accounts(array('account_id', 'account_name', 'fk_account_name', 'account_status', 'seller_id'))) . ';',
+										'var payments_issues = ' . get_all_payments_issues("amazon") . ';',
+									)
+								),
+								"init" => array(
+									"Amazon.init('payments');",
 								),
 							),
 						),
@@ -4096,7 +4159,7 @@ function gen_uuid($prefix = '')
 	$chars = md5(uniqid(mt_rand(), true));
 	$parts = [substr($chars, 0, 8), substr($chars, 8, 4), substr($chars, 12, 4), substr($chars, 16, 4), substr($chars, 20, 12)];
 
-	return $prefix . implode($parts, '-');
+	return $prefix . implode('-', $parts);
 }
 
 function check_diff_multi($array1, $array2)

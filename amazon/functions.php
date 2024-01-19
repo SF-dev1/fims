@@ -954,3 +954,67 @@ function getUrlMimeType($url)
 	$finfo = new finfo(FILEINFO_MIME_TYPE);
 	return $finfo->buffer($buffer);
 }
+
+function insert_payments($account_id, $data)
+{
+	global $db;
+	$settlementDate = str_replace(".", "-", $data[0]["deposit_date"]);
+	$settlementId = $data[0]["settlement_id"];
+	// $totalSettledAmount = $data[0]["total_amount"];
+
+	$payments = array();
+	$insertData = array();
+
+	for ($i = 1; $i < count($data); $i++) {
+		$orderId = $data[$i]["order_id"];
+		$itemCode = $data[$i]["order_item_code"];
+
+		$index = $i;
+		while ($orderId == $data[$i]["order_id"]) {
+			$payments[$index][$orderId][$itemCode]["gst"] = 0;
+			foreach ($data[$i] as $key => $value) {
+
+				if ($key == "price_type") {
+					$payments[$index][$orderId][$itemCode][processFunction($value)] = $data[$i]["price_amount"];
+				} else if ($key == "item_related_fee_type") {
+					$payments[$index][$orderId][$itemCode][processFunction($value)] = $data[$i]["item_related_fee_amount"];
+				} else if ($key == "promotion_type") {
+					$payments[$index][$orderId][$itemCode][processFunction($value)] = $data[$i]["promotion_amount"];
+				} else {
+					$payments[$index][$orderId][$itemCode][$key] = $value;
+				}
+			}
+			$i++;
+		}
+		$insertData[] = array(
+			"settlementId" => $settlementId,
+			"accountId" => $account_id,
+			"orderId" => $orderId,
+			"itemId" => $itemCode,
+			"settlementDate" => $settlementDate,
+			"salesAmount" => (is_null($payments[$index][$orderId][$itemCode]["principal"]) ? 0 : $payments[$index][$orderId][$itemCode]["principal"]),
+			"salesGst" => (is_null($payments[$index][$orderId][$itemCode]["product_tax"]) ? 0 : $payments[$index][$orderId][$itemCode]["product_tax"]),
+			"tcs" => (is_null($payments[$index][$orderId][$itemCode]["tcs_igst"]) ? 0 : $payments[$index][$orderId][$itemCode]["tcs_igst"]),
+			"tds" => ((is_null($payments[$index][$orderId][$itemCode]["tds_(section_194_o)"]) ? 0 : $payments[$index][$orderId][$itemCode]["tds_(section_194_o)"])),
+			"shippingCharge" => (is_null($payments[$index][$orderId][$itemCode]["shipping"]) ? 0 : $payments[$index][$orderId][$itemCode]["shipping"]),
+			"shippingTax" => (is_null($payments[$index][$orderId][$itemCode]["shipping_tax"]) ? 0 : $payments[$index][$orderId][$itemCode]["shipping_tax"]),
+			"shippingDiscount" => (is_null($payments[$index][$orderId][$itemCode]["shipping_discount"]) ? 0 : $payments[$index][$orderId][$itemCode]["shipping_discount"]),
+			"shippingTaxDiscount" => (is_null($payments[$index][$orderId][$itemCode]["shipping_tax_discount"]) ? 0 : $payments[$index][$orderId][$itemCode]["shipping_tax_discount"]),
+			"handlingCharge" => (is_null($payments[$index][$orderId][$itemCode]["fba_weight_handling_fee"]) ? 0 : $payments[$index][$orderId][$itemCode]["fba_weight_handling_fee"]),
+			"handlingTax" => $payments[$index][$orderId][$itemCode]["fba_weight_handling_fee_cgst"] + $payments[$index][$orderId][$itemCode]["fba_weight_handling_fee_sgst"],
+			"pickPackCharge" => (is_null($payments[$index][$orderId][$itemCode]["fba_pick_pack_fee"]) ? 0 : $payments[$index][$orderId][$itemCode]["fba_pick_pack_fee"]),
+			"pickPackTax" => $payments[$index][$orderId][$itemCode]["fba_pick_pack_fee_cgst"] + $payments[$index][$orderId][$itemCode]["fba_pick_pack_fee_sgst"],
+			"commission" => (is_null($payments[$index][$orderId][$itemCode]["commission"]) ? 0 : $payments[$index][$orderId][$itemCode]["commission"]),
+			"commissionTax" => (is_null($payments[$index][$orderId][$itemCode]["commission_igst"]) ? 0 : $payments[$index][$orderId][$itemCode]["commission_igst"]),
+			"closingFee" => (is_null($payments[$index][$orderId][$itemCode]["fixed_closing_fee"]) ? 0 : $payments[$index][$orderId][$itemCode]["fixed_closing_fee"]),
+			"closingFeeTax" => (is_null($payments[$index][$orderId][$itemCode]["fixed_closing_fee_igst"]) ? 0 : $payments[$index][$orderId][$itemCode]["fixed_closing_fee_igst"]),
+		);
+	}
+
+	if ($db->insertMulti(TBL_AZ_PAYMENTS, $insertData)) {
+		$return = array("type" => "success", "message" => "payments data successfully inserted!");
+	} else {
+		$return = array("type" => "Error", "message" => "Unable to insert", "error" => $db->getLastError());
+	}
+	return $return;
+}

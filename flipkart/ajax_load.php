@@ -423,7 +423,7 @@ if (isset($_REQUEST['action'])) {
 													<div class='order-item-block'><div class='order-item-field order-item-padding'>FSN </div><div class='order-item-field order-item-value fsn'>" . $order->fsn . "</div></div>
 													<div class='order-item-block'><div class='order-item-field order-item-padding'>SKU </div><div class='order-item-field order-item-value sku'>" . $order->sku . "</div></div>
 													<div class='order-item-block hide'><div class='order-item-field order-item-padding'>COMBO </div><div class='order-item-field order-item-value combo_ids'>" . $combo_ids . "</div></div>
-													<div class='order-item-block'><div class='order-item-field order-item-padding'>UIDS </div><div class='order-item-field order-item-value uids'>" . implode(', ', json_decode($order->uid, true)) . "</div></div>
+													<div class='order-item-block'><div class='order-item-field order-item-padding'>UIDS </div><div class='order-item-field order-item-value uids'>" . (!is_null($order->uid) ? implode(', ', json_decode($order->uid, true)) : '') . "</div></div>
 												</div>
 												<div class='order-price-qty order-price-qty-" . $order->orderItemId . "'>
 													<div class='order-item-block-title'>PRICE &amp; QTY</div>
@@ -1424,9 +1424,6 @@ if (isset($_REQUEST['action'])) {
 					break;
 
 				case 'redownload-label':
-					// error_reporting(E_ALL);
-					// ini_set('display_errors', '1');
-					// echo '<pre>';
 					$shipment_ids = $fk->arrange_orders($shipment_ids, $columns);
 					$return = array("type" => "error", "message" => "Error Processing your Request! <br />Please try again.");
 
@@ -2689,8 +2686,10 @@ if (isset($_REQUEST['action'])) {
 						if ($_REQUEST[$uid]['product_condition'] == "saleable") // REQUIRED FOR COMBO PRODUCTS
 							continue;
 						$mandatory_fields['product_condition'] = $product_condition = $_REQUEST[$uid]['product_condition'];
-						if (isset($_REQUEST{$uid}[$product_condition]))
-							$product_issue = array_merge($product_issue, $_REQUEST{$uid}[$product_condition]);
+						if (isset($_REQUEST{
+							$uid}[$product_condition]))
+							$product_issue = array_merge($product_issue, $_REQUEST{
+								$uid}[$product_condition]);
 						else
 							$product_issue = array_merge($product_issue, array($product_condition));
 					}
@@ -3726,14 +3725,12 @@ if (isset($_REQUEST['action'])) {
 			$db->join(TBL_FK_PAYMENTS . " p", "p.orderItemId=o.orderItemId", "INNER");
 			$db->join(TBL_FK_ACCOUNTS . ' a', "a.account_id=o.account_id", "LEFT");
 			$db->join(TBL_FK_RETURNS . " r", "o.orderItemId=r.orderItemId", "LEFT");
-			// $db->where('(r.r_shipmentStatus != ? OR r.r_shipmentStatus != ? OR r.r_shipmentStatus != ? OR r.r_shipmentStatus != ?)', array('start', 'in_transit', 'out_for_delivery', 'delivered'));
-			// $db->where('o.orderItemId', '11331033293802500');
 			$db->where('o.dispatchAfterDate', '2017-07-01 00:00:00', '>=');
 			$db->where('o.settlementStatus', 0);
 			$db->where('o.settlementNotes', '');
 			$db->orderBy('o.orderDate, o.shippedDate, o.dispatchAfterDate', 'ASC');
 			$db->groupBy('o.orderItemId');
-			$settlements = $db->get(TBL_FK_ORDERS . ' o', NULL, 'p.paymentId, a.account_id, a.account_name, o.orderItemId, o.orderId, o.orderDate, COALESCE(o.shippedDate, o.dispatchByDate) AS shippedDate, SUM(p.paymentValue) AS paymentValue, r.r_shipmentStatus, o.commissionIncentive');
+			$settlements = $db->get(TBL_FK_ORDERS . ' o', 10, 'p.paymentId, a.account_id, a.account_name, o.orderItemId, o.orderId, o.orderDate, COALESCE(o.shippedDate, o.dispatchByDate) AS shippedDate, SUM(p.paymentValue) AS paymentValue, r.r_shipmentStatus, o.commissionIncentive');
 			// echo $db->getLastQuery();
 			// echo count($settlements);
 			// exit;
@@ -4061,6 +4058,9 @@ if (isset($_REQUEST['action'])) {
 
 		case 'get_difference_details':
 
+			// error_reporting(E_ALL);
+			// ini_set('display_errors', '1');
+			// echo '<pre>';
 			if (!isset($_REQUEST['orderItemId']) && !isset($_REQUEST['account_id']))
 				return;
 
@@ -4077,6 +4077,7 @@ if (isset($_REQUEST['action'])) {
 
 			$fk = new connector_flipkart($accounts[$account_key]);
 			$return = $fk->payments->get_difference_details($orderItemId);
+			// ccd($return);
 			$orders = $return['orders'];
 			$order = (object)$return['order'];
 			if (isset($return['difference']['payment_type']) && $return['difference']['payment_type'] == "cod")
@@ -4100,6 +4101,7 @@ if (isset($_REQUEST['action'])) {
 
 			$j = 0;
 			$last = count($output_content['settlement_date']) - 1;
+			// ccd($output_content);
 			$inner_content = '<tbody>';
 			foreach ($output_content as $level_key => $level_value) {
 				// var_dump($level_value);
@@ -4151,7 +4153,7 @@ if (isset($_REQUEST['action'])) {
 						if ($i == $last && in_array($level_key, $editables)) {
 							// if ($level_key == 'flipkart_discount')
 							// 	$value = $value/$order->quantity;
-							$editor = '<a class="update_difference" data-itemId="' . $orderItemId . '" data-accountId="' . $account_id . '" data-key="' . $level_key . '" data-value="' . ($level_value[0] - $value) . '">Update</a>&nbsp;';
+							$editor = '<a class="update_difference" data-itemId="' . $orderItemId . '" data-accountId="' . $account_id . '" data-key="' . $level_key . '" data-value="' . ((float)$level_value[0] - (float)$value) . '">Update</a>&nbsp;';
 							if ($level_key == 'commission_rate' || $level_key == 'shipping_slab' || $level_key == 'payment_type' || $level_key == 'shipping_zone'  || $level_key == 'shipping_zone')
 								$editor = '<a class="update_difference" data-itemId="' . $orderItemId . '" data-accountId="' . $account_id . '" data-key="' . $level_key . '" data-value="' . $value . '">Update</a>&nbsp;';
 							if ($level_key == 'sale_amount') {
@@ -7131,7 +7133,7 @@ if (isset($_REQUEST['action'])) {
 			$details = array(
 				'referenceId' => $referenceIds,
 				'incidentStatus' => 'closed',
-				'closedDate' => $db->now(),
+				'closedDate' => date('Y-m-d H:i:s'),
 			);
 			$return = array();
 			$db->where('incidentId', $incidentId);
@@ -7208,7 +7210,7 @@ if (isset($_REQUEST['action'])) {
 				$db->where('incidentId', $incidentId);
 				$details = array(
 					'incidentStatus' => 'closed',
-					'closedDate' => $db->now(),
+					'closedDate' => date('Y-m-d H:i:s'),
 					'mergedToIncident' => $mergeToIncidentId,
 				);
 
@@ -7997,7 +7999,7 @@ if (isset($_REQUEST['action'])) {
 				// Process start
 				$data  = array(
 					"logType" => "Order Process Start",
-					"identifier" => $orders[0]->orderId,
+					"identifier" => $orders[0]->orderItemId,
 					"userId" => $current_user['userID']
 				);
 				$db->insert(TBL_PROCESS_LOG, $data);
@@ -8126,7 +8128,9 @@ if (isset($_REQUEST['action'])) {
 							$fulfillable_quantity = count(json_decode($order->subItems)[0]->packages);
 							if ($order->ordered_quantity != $order->quantity)
 								$fulfillable_quantity = $order->quantity;
-							$uids = json_decode($order->uid, true);
+							$uids = NULL;
+							if (!is_null($order->uid))
+								$uids = json_decode($order->uid, true);
 							$uids_count = is_null($uids) ? 0 : count($uids);
 							$db->where('pid', $products['pid']);
 							$item = $db->getOne(TBL_PRODUCTS_MASTER, 'pid as item_id, sku as parent_sku');
@@ -8220,6 +8224,7 @@ if (isset($_REQUEST['action'])) {
 							}
 						}
 					}
+					$content_html = "";
 					foreach ($content as $html) {
 						$content_html .= implode('', $html);
 					}

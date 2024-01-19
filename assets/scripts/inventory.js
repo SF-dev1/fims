@@ -13,7 +13,7 @@ var Inventory = function () {
 	var box_qty_count = 0;
 	var ctn_qty_count = 0;
 	var weight_enable_categories = ['Silver Bracellete', 'Silver Earrings', 'Silver Necklace', 'Silver Anklets', 'Silver Rings'];
-	
+
 	// SUBMIT FORM
 	var submitForm = function (formData, $type) {
 		var $ret = "";
@@ -2649,7 +2649,7 @@ var Inventory = function () {
 						if (status == "Already Audited")
 							label_tag = 'info';
 
-						audit_response += '<p class=""class="help-block"><span class="label label-'+label_tag+'">' + status + ' ('+uids.length+')</span> ' + uids.join(", ") + '</p>';
+						audit_response += '<p class=""class="help-block"><span class="label label-' + label_tag + '">' + status + ' (' + uids.length + ')</span> ' + uids.join(", ") + '</p>';
 					});
 					$('.audit_response').html(audit_response).removeClass('hide');
 				} else {
@@ -2660,6 +2660,50 @@ var Inventory = function () {
 				$('.btn-success i').removeClass('fa fa-sync fa-spin');
 			}, 10);
 		});
+	}
+
+	// CONTENT
+	function stockContent_handleForm() {
+		// console.log('stockReconciliation_handleForm');
+		$('form#content').submit(function (e) {
+			e.preventDefault();
+			$('.content_details').addClass('hide');
+			var box_number = $('.box_number').val();
+			if (box_number == "") {
+				$('.box_number').closest('div').addClass('has-error');
+				return;
+			}
+
+			var newurl = window.location.protocol + "//" + window.location.host + window.location.pathname + '?box_number=' + box_number;
+			window.history.pushState({ path: newurl }, '', newurl);
+			stockContent_handleValidation(box_number);
+			$('.export_content_details').attr('href', './ajax_load.php?action=export_content_details&box_number=' + box_number);
+		});
+
+		var para_sku = App.getURLParameter('box_number');
+		if (para_sku != "" && para_sku != null) {
+			$('form#content').submit();
+		}
+	}
+
+	function stockContent_handleValidation(box_number) {
+
+		$('.btn-success').attr('disabled', true);
+		$('.btn-success i').removeClass('fa-search').addClass('fa-sync fa-spin');
+
+		window.setTimeout(function () {
+			var s = submitForm("action=get_content_details&box_number=" + box_number, 'GET');
+			console.log(s);
+			if (s.type == "success") {
+				$('.content_details').removeClass('hide');
+				$('.content_data').html(s.content);
+			} else {
+				UIToastr.init(s.type, 'box_number Reconciliation Report', s.msg);
+				$('.content_details').addClass('hide');
+			}
+			$('.btn-success').attr('disabled', false);
+			$('.btn-success i').removeClass('fa-sync fa-spin').addClass('fa-search');
+		}, 10);
 	}
 
 	// ANALYTICS
@@ -3091,7 +3135,7 @@ var Inventory = function () {
 	}
 
 	function addItem() {
-		$(".product_number").on("paste", function(e) {
+		$(".product_number").on("paste", function (e) {
 			e.preventDefault();
 			alert("Pasting Is blocked!!!");
 		})
@@ -3307,6 +3351,10 @@ var Inventory = function () {
 
 				case "reconciliation":
 					stockReconciliation_handleForm();
+					break;
+
+				case "content":
+					stockContent_handleForm();
 					break;
 
 				case "audit":
