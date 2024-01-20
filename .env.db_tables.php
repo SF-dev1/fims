@@ -42,6 +42,7 @@ $definer = array(
 	'TBL_INVENTORY_QC_ISSUES' => 'bas_inventory_qc_issues',
 	'TBL_INVENTORY_STATE' => 'bas_inventory_state',
 	'TBL_INVENTORY_COMPONENTS' => 'bas_inventory_components',
+	'TBL_INVENTORY_LOCATIONS' => 'bas_inventory_locations',
 	'TBL_LOGIN_ATTEMPTS' => 'bas_login_attempts',
 	'TBL_MP_FEES' => 'bas_mp_fees',
 	'TBL_MS_ACCOUNTS' => 'bas_ms_accounts',
@@ -98,6 +99,7 @@ $definer = array(
 	'TBL_USERS' => 'bas_users',
 	'TBL_USER_DEVICES' => 'bas_user_devices',
 	'TBL_USER_LOCATIONS' => 'bas_user_locations',
+	'TBL_TASKS' => 'bas_tasks',
 
 	// MARKETPLACE PRODUCT URLS
 	'FK_PRODUCT_URL' => 'https://dl.flipkart.com/dl/product/p/itme?pid=FSN',

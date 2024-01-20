@@ -102,8 +102,9 @@ class Stockist
 
 	public function new_grn_inbound($grn_id, $lineItems, $lot_details, $uid = 1)
 	{
-		global $db, $log;
-
+		global $db, $log, $current_user;
+		$capacity = count($lineItems);
+		$expectedLocation = $this->get_expected_location_status("inbound", $capacity);
 		$return = [];
 		foreach ($lineItems as $lineItem) {
 			$item_price = $this->calculate_item_price($lineItem['price'], $lot_details);
@@ -119,12 +120,22 @@ class Stockist
 					'lot_id' => $lot_details['lot_id'],
 					'firm_id' => $lot_details['firm_id'],
 					'is_ams_inv' => $lot_details['is_ams_inv'],
+					'expectedLocation' => $expectedLocation,
 					'inv_status' => 'inbound'
 				);
 				if ($db->insert(TBL_INVENTORY, $details)) {
 					$this->add_inventory_log($inv_id, 'inbound', 'Inbound Inventory :: Lot# ' . $lot_details['lot_number'] . ' :: ' . sprintf('GRN_%06d', $grn_id));
 					$log->write('Inventory added ' . $inv_id . ' Inbound Inventory :: Lot# ' . $lot_details['lot_number'] . ' :: ' . sprintf('GRN_%06d', $grn_id), 'inventory-inbound');
 					$return[$inv_id] = 'success';
+					$db->where("user_role", "administrator");
+					$ids = $db->get(TBL_USERS, "userID");
+					$task = array(
+						"createdBy" => $current_user["userID"],
+						"title" => "Products Ready For Tagging",
+						"userRoles" => json_encode($ids),
+						"status" => "0"
+					);
+					$db->insert(TBL_TASKS, $task);
 				} else {
 					$return[$inv_id] = 'unable to insert inv#: ' . $inv_id . ':: Error: ' . $db->getLastError() . '<br />';
 					$log->write('Unable to insert inv ' . $inv_id . ' :: Error: ' . $db->getLastError(), 'inventory-inbound');
@@ -240,8 +251,39 @@ class Stockist
 		return number_format($db->getValue(TBL_INVENTORY, "AVG(item_price)"), 0, '.', '');
 	}
 
-	public function re_qc()
+	public function get_expected_location_status($status, $capacity)
 	{
+		global $db;
+		$locationTitle = "";
+		switch ($status) {
+			case 'inbound':
+				$locationTitle = "Warehouse Location";
+				$db->where("locationTitle", $locationTitle, "LIKE");
+				$db->where("status", "0"); // 0 => empty location
+				$db->where("capacity", $capacity, ">="); // storage capacity of the location checking
+				$locationId = $db->getValue(TBL_INVENTORY_LOCATIONS, "locationId");
+				break;
+			case 'printing':
+				$locationTitle = "Printing Area";
+				$db->where("locationTitle", $locationTitle, "LIKE");
+				$db->where("status", ["0", "1"], "IN"); // 0 => empty location, 1 => partially used location
+				$db->where("capacity", $capacity, ">="); // storage capacity of the location checking
+				$db->where("availability", $capacity, ">="); // available storage space at the location
+				$locationId = $db->getValue(TBL_INVENTORY_LOCATIONS, "locationId");
+				break;
+			case 'qc_pending':
+				break;
+			case 'qc_cooling':
+				break;
+			case 'qc_verified':
+				break;
+			case 'qc_failed':
+				break;
+			case 'components_requested':
+				break;
+		}
+
+		return $locationId;
 	}
 
 	public static function getInstance()

@@ -2647,11 +2647,11 @@ var Amazon = (function () {
 										window.setTimeout(function () {
 											refreshPayout(
 												tr.attr("id"),
-												tr.find("td:last").prev().text()
+												tr.find("td:last").text()
 											);
 											var details = getTransactionDetails(
 												tr.attr("id"),
-												tr.find("td:last").prev().text()
+												tr.find("td:last").text()
 											);
 											if (tab_type == "disputed") {
 												tr.find("td:eq(4)").html(details["netPayout"]);

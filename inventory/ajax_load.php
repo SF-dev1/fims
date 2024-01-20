@@ -161,13 +161,17 @@ if (isset($_REQUEST['action'])) {
 			$inv_ids = $_POST['inv_ids'];
 			$ctn_id = $_POST['ctn_id'];
 			$box_id = $_POST['box_id'];
+
+			$inv_ids = json_decode($inv_ids, true);
+			$capacity = count($inv_ids);
+			$expectedLocation = $stockist->get_expected_location_status("printing", $capacity);
 			$details = array(
 				"box_id" => $box_id,
 				"ctn_id" => $ctn_id,
-				"inv_status" => 'qc_pending'
+				"inv_status" => 'qc_pending',
+				"expectedLocation" => $expectedLocation
 			);
 
-			$inv_ids = json_decode($inv_ids, true);
 			$response_i = $response[] = array();
 			for ($i = 0; $i < count($inv_ids); $i++) {
 				$inv_id = $inv_ids[$i]['uid'];

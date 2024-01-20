@@ -358,7 +358,7 @@ if (isset($_REQUEST['action']) && trim($_REQUEST['action']) != "") {
 					$item_qty = "";
 					$checked_checkbox = "checked";
 					$inactive = "inactive";
-					if (in_array($item_name, array_column($current_lot, 'itemName'))) { // search value in the array
+					if (!is_null($current_lot) && in_array($item_name, array_column($current_lot, 'itemName'))) { // search value in the array
 						$key = array_search($item_name, array_column($current_lot, 'itemName'));
 						$item_qty = $current_lot[$key]->item_shipped_qty;
 						// $checked_checkbox = "checked";

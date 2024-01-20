@@ -4080,6 +4080,7 @@ if (isset($_REQUEST['action'])) {
 			// ccd($return);
 			$orders = $return['orders'];
 			$order = (object)$return['order'];
+
 			if (isset($return['difference']['payment_type']) && $return['difference']['payment_type'] == "cod")
 				unset($return['difference']['payment_type']);
 

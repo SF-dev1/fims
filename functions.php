@@ -46,6 +46,69 @@ function menu_items()
 			"css" => array(),
 			"function_int" => array(),
 		),
+		"tasks" => array(
+			"title" => "Tasks",
+			"icon" => "icon-home",
+			"href" => "javascript:;",
+			"sub" => array(
+				"my_tasks" => array(
+					"title" => "My Tasks",
+					"href" => BASE_URL . "/tasks/tasks.php",
+					"header" => array(
+						"css" => array(
+							"datatables/plugins/bootstrap/dataTables.bootstrap.css",
+							"datatables/extensions/fixedHeader/css/fixedHeader.dataTables.min.css",
+							"select2/select2.css",
+						),
+					),
+					"footer" => array(
+						"plugins" => array(
+							"select2/select2.min.js?v=" . $js_version,
+							"jquery-validation/js/jquery.validate.min.js?v=" . $js_version,
+							"datatables/media/js/jquery.dataTables-1.10.20.min.js?v=" . $js_version,
+							"datatables/extensions/fixedHeader/js/dataTables.fixedHeader.min.js?v=" . $js_version,
+							"datatables/plugins/bootstrap/dataTables.bootstrap.js?v=" . $js_version,
+						),
+						"scripts" => array(
+							"tasks.js?v=" . $js_version
+						),
+						"init" => array(
+							"Tasks.init('my_tasks');",
+						),
+					),
+				),
+				"approvals" => array(
+					"title" => "Approvals",
+					"href" => BASE_URL . "/tasks/approvals.php",
+					"header" => array(
+						"css" => array(
+							"datatables/plugins/bootstrap/dataTables.bootstrap.css",
+							"bootstrap-fileinput/bootstrap-fileinput.css",
+							"bootstrap-switch/css/bootstrap-switch.min.css",
+							"select2/select2.css",
+						),
+					),
+					"footer" => array(
+						"plugins" => array(
+							"bootstrap-fileinput/bootstrap-fileinput.js?v=" . $js_version,
+							"datatables/media/js/jquery.dataTables-1.10.20.min.js?v=" . $js_version,
+							"datatables/plugins/bootstrap/dataTables.bootstrap.js?v=" . $js_version,
+							"bootstrap-switch/js/bootstrap-switch.min.js?v=" . $js_version,
+							"bootstrap-touchspin/bootstrap.touchspin.js?v=" . $js_version,
+							"jquery-validation/js/jquery.validate.min.js?v=" . $js_version,
+							"select2/select2.min.js?v=" . $js_version,
+						),
+						"scripts" => array(
+							"tasks.js?v=" . $js_version
+						),
+						"init" => array(
+							"Tasks.init('approvals');",
+						),
+					),
+				),
+
+			),
+		),
 		"products" => array(
 			"title" => "Products",
 			"icon" => "fa fa-barcode",

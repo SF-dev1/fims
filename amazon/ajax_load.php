@@ -2508,10 +2508,10 @@ if (isset($_REQUEST['action'])) {
             $inner_content = '';
             $content = "";
 
-            ccd($itemId);
             $return = $amazon->get_difference_details($itemId);
             $orders = $return['orders'];
             $order = (object)$return['order'];
+
             $settlements = array_merge(array($return['expected_payout']), $return['settlements'], array($return['difference']));
             $key_order = array('settlement_date', 'sale_amount', 'marketplace_fees', 'commission_fee', 'fixed_fee', 'closingFee', 'pickPackCharge', 'shipping_zone', 'shipping_fee', 'taxes', 'tcs', 'tds', 'gst', 'total');
 
@@ -2605,11 +2605,9 @@ if (isset($_REQUEST['action'])) {
 	                        						<div class="order-title">Status</div>
 	                        						<div class="order-title">SKU</div>
 	                        						<div class="order-title">Shipped Date </div>
-	                        						<div class="order-title">Invoice Number </div>
-	                        						<div class="order-title">Invoice Date </div>
 	                        					</div>
 	                        					<div class="details-col-value">
-	                        						<div class="heading-value"><a href="" target="_black">' . $order["itemId"] . '</a></div>
+	                        						<div class="heading-value"><a href="" target="_black">' . $order["orderItemId"] . '</a></div>
 	                        						<div class="heading-value">' . $order["az_status"] . '</div>
 	                        						<div class="heading-value">' . $order["quantity"] . ' x ' . $order["sku"] . '</div>
 	                        						<div class="heading-value">' . date('d M, Y', ($order["shipByDate"] == NULL ? strtotime($order["dispatchAfterDate"]) : strtotime($order["shipByDate"]))) . '</div>
@@ -2621,7 +2619,6 @@ if (isset($_REQUEST['action'])) {
 	                        		</div>
 	                        		<div class="col-md-1 product-container-buttons text-right">
 	                        			<a data-itemid="' . $order["itemId"] . '" class="mark_settled btn btn-default btn-xs" title="Mark Settled"><i class="fa fa-check" aria-hidden="true"></i></a><br />
-	                        			<a data-itemid="' . $order["itemId"] . '" class="refresh_payout btn btn-default btn-xs" title="Refresh Payout"><i class="fa fa-recycle" aria-hidden="true"></i></a><br />
 	                        		</div>
 	                        	</div>
 	                        	<div class="settlement-notes form clearfix">
