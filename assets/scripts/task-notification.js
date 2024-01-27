@@ -1,6 +1,5 @@
 
 function playSuccessSound() {
-    // Replace 'success.mp3' with the path to your success sound file
     var audio = $("#notifyAudio")[0];
     audio.play();
 }
@@ -33,23 +32,84 @@ var submitForm = function (formData, $type) {
     return $ret;
 };
 
-function fetchData(baseUrl) {
-    // Replace 'your_url_here' with the actual URL you want to call
-    // const url = '/tasks/ajax_load.php?action=getNotification';
-
+function fetchPendingApprovals() {
     var formData = new FormData();
     formData.append("action", "getNotification");
     var response = submitForm(formData, "POST");
-    // console.log(response);
+    console.log(response);
     if (response.type == "success") {
         var pendingCount = $("#pendingTask");
         pendingCount.text(response.data.length);
         var content = "";
         for (let index = 0; index < response.data.length; index++) {
-            content += '<li><a href="' + baseUrl + "/tasks/approvals.php" + '"><span class="task"><span class="desc">' + response.data[index].title + '</span></span></a></li>';
+            content += '<li><a href="/tasks/approvals.php"><span class="task"><span class="desc">' + response.data[index].title + '</span></span></a></li>';
         }
         $("#pendingTaskBody").html(content);
         playSuccessSound();
+    }
+}
+
+function addCoolingApprovals() {
+    var formData = new FormData();
+    formData.append("action", "addCoolingEndTask");
+    var response = submitForm(formData, "POST");
+    if (response.type == "success") {
+        // var pendingCount = $("#pendingTask");
+        // pendingCount.text(response.data.length);
+        // var content = "";
+        // for (let index = 0; index < response.data.length; index++) {
+        //     content += '<li><a href="/tasks/approvals.php"><span class="task"><span class="desc">' + response.data[index].title + '</span></span></a></li>';
+        // }
+        // $("#pendingTaskBody").append(content);
+        // playSuccessSound();
+    }
+}
+
+function addVerifiedApprovals() {
+    var formData = new FormData();
+    formData.append("action", "addQcVerifiedTask");
+    var response = submitForm(formData, "POST");
+    if (response.type == "success") {
+        // var pendingCount = $("#pendingTask");
+        // pendingCount.text(response.data.length);
+        // var content = "";
+        // for (let index = 0; index < response.data.length; index++) {
+        //     content += '<li><a href="/tasks/approvals.php"><span class="task"><span class="desc">' + response.data[index].title + '</span></span></a></li>';
+        // }
+        // $("#pendingTaskBody").append(content);
+        // playSuccessSound();
+    }
+}
+
+function addFailedApprovals() {
+    var formData = new FormData();
+    formData.append("action", "addQcFailedTask");
+    var response = submitForm(formData, "POST");
+    if (response.type == "success") {
+        // var pendingCount = $("#pendingTask");
+        // pendingCount.text(response.data.length);
+        // var content = "";
+        // for (let index = 0; index < response.data.length; index++) {
+        //     content += '<li><a href="/tasks/approvals.php"><span class="task"><span class="desc">' + response.data[index].title + '</span></span></a></li>';
+        // }
+        // $("#pendingTaskBody").append(content);
+        // playSuccessSound();
+    }
+}
+
+function addComponentApprovals() {
+    var formData = new FormData();
+    formData.append("action", "addComponentRequestedTask");
+    var response = submitForm(formData, "POST");
+    if (response.type == "success") {
+        // var pendingCount = $("#pendingTask");
+        // pendingCount.text(response.data.length);
+        // var content = "";
+        // for (let index = 0; index < response.data.length; index++) {
+        //     content += '<li><a href="/tasks/approvals.php"><span class="task"><span class="desc">' + response.data[index].title + '</span></span></a></li>';
+        // }
+        // $("#pendingTaskBody").append(content);
+        // playSuccessSound();
     }
 }
 

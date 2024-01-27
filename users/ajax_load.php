@@ -57,6 +57,7 @@ if (isset($_REQUEST['action']) && trim($_REQUEST['action']) != "") {
 			$details = $_POST;
 			unset($details['action']);
 
+			$db->startTransaction();
 			$details['user_activation_key'] = $userAccess->generateValidationString('email');
 			$details['user_otp'] = $userAccess->generateValidationString('mobile');
 			$details['user_capabilities'] = json_encode(array());
@@ -66,8 +67,10 @@ if (isset($_REQUEST['action']) && trim($_REQUEST['action']) != "") {
 			if ($userID) {
 				$userAccess->sendVerificationLink($userID);
 				$return = array("type" => "success", "msg" => "Successfully added new user");
+				$db->commit();
 			} else {
 				$return = array("type" => "error", "msg" => "Unable to add new user", "error" => $db->getLastError());
+				$db->rollBack();
 			}
 			// header('Content-Type: application/json');
 			echo json_encode($return);

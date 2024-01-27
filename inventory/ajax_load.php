@@ -178,6 +178,20 @@ if (isset($_REQUEST['action'])) {
 				if ($stockist->update_inventory_details($inv_id, $details)) {
 					if ($stockist->add_inventory_log($inv_id, 'tagging', "Label Tagging :: Carton# " . $ctn_id . " :: Box# " . $box_id)) {
 						$response[] = true;
+						$db->where("user_role", "printing");
+						$db->orWhere("user_role", "super_admin");
+						$ids = array_map(function ($innerArray) {
+							return $innerArray["userID"];
+						}, $db->get(TBL_USERS, null, "userID"));
+						$task = array(
+							"createdBy" => $current_user["userID"],
+							"title" => "Products Ready For Printing",
+							"ctnId" => $ctn_id,
+							"category" => "printing",
+							"userRoles" => json_encode($ids),
+							"status" => "0"
+						);
+						$db->insert(TBL_TASKS, $task);
 					} else {
 						$response[] = false;
 					}
@@ -862,6 +876,9 @@ if (isset($_REQUEST['action'])) {
 					'inv_status' => 'qc_failed',
 				);
 				$log_details = $issue_ids;
+				// ******************************
+				// Add task to repairing
+				// ******************************
 			} else {
 				if ($current_status == "qc_cooling") {
 					$inv_status = 'qc_verified';
@@ -869,14 +886,22 @@ if (isset($_REQUEST['action'])) {
 				} else if ($category != "Watches") {
 					$inv_status = 'qc_verified';
 					$log_details = 'QC Verified';
-					$colling_period = "";
+					$cooling_period = "";
 				} else {
 					$inv_status = 'qc_cooling';
-					$colling_period = "";
+					$cooling_period = "";
 					if ($category == "Watches") {
-						$colling_period = '. Cooling Period enabled.::Cooling Period End: ' . date("d M, Y H:i:s", strtotime("+72 hours"));
+						$expectedLocation = $stockist->get_expected_location_by_status("qc_cooling");
+						$details = array(
+							"expectedLocation" => $expectedLocation,
+							"currentLocation" => null,
+						);
+						$db->where("inv_id", $inv_id);
+						$db->update(TBL_INVENTORY, $details);
+
+						$cooling_period = '. Cooling Period enabled.::Cooling Period End: ' . date("d M, Y H:i:s", strtotime("+72 hours"));
 					}
-					$log_details = 'QC In Progress' . $colling_period;
+					$log_details = 'QC In Progress' . $cooling_period;
 				}
 			}
 

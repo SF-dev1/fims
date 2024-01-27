@@ -109,9 +109,9 @@ var Tasks = function () {
                     rejectReason = "<span class='badge badge-info'> Not Rejected </span>";
                 }
                 content += "<tr id='row_" + response.data[i].id + "'>";
-                content += "<td>" + response.data[i].id + "</td>";
+                content += "<td>" + (i + 1) + "</td>";
                 content += "<td>" + response.data[i].title + "</td>";
-                content += "<td>" + response.data[i].name + "</td>";
+                content += "<td>" + ((response.data[i].name != null) ? response.data[i].name : "The System - BY Jay Chauhan") + "</td>";
                 content += "<td>" + rejectReason + "</td>";
                 content += "<td>" + status + "</td>";
                 content += "<td><button id='actionBtn' class='btn btn-sm btn-info' data-taskid='" + response.data[i].id + "'>Accept</button></td>";
@@ -144,7 +144,7 @@ var Tasks = function () {
 
         formData.append("action", "getApprovals");
         var response = submitForm(formData, "POST");
-        console.log(response.data);
+        // console.log(response.data);
         var content = "";
         if (response.type == "success") {
             for (let i = 0; i < response.data.length; i++) {
@@ -158,35 +158,60 @@ var Tasks = function () {
                     status = "<span class='badge badge-success'> Completed </span>";
                 }
 
-                if (response.data[i].rejectReason == null) {
-                    rejectReason = "<span class='badge badge-info'> Not Rejected </span>";
-                }
+                // Convert the date string to a Date object
+                var dateObject = new Date(response.data[i].createdDate);
+                var formattedDateTime = dateObject.toLocaleString('en-US', { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: 'numeric', hour12: true });
+
+                rejectReason = (response.data[i].rejectReason == null) ? "<span class='badge badge-info'> Not Rejected </span>" : response.data[i].rejectReason;
                 content += "<tr id='row_" + response.data[i].id + "'>";
-                content += "<td>" + response.data[i].id + "</td>";
+                content += "<td>" + (i + 1) + "</td>";
                 content += "<td>" + response.data[i].title + "</td>";
-                content += "<td>" + response.data[i].name + "</td>";
-                content += "<td>" + rejectReason + "</td>";
+                content += "<td>CTN" + String(response.data[i].ctnId).padStart(9, '0') + "</td>";
+                content += "<td>" + response.data[i].expectedLocation + "</td>";
+                content += "<td>" + ((response.data[i].name != null) ? response.data[i].name : "The System - BY Jay Chauhan") + "</td>";
                 content += "<td>" + status + "</td>";
-                content += "<td><button id='actionBtn' class='btn btn-sm btn-info' data-taskid='" + response.data[i].id + "'>Accept</button></td>";
+                content += "<td>" + formattedDateTime + "</td>";
+                content += "<td><a role='button' href='#reject_task' class='btn btn-sm btn-success actionBtn' data-action='accept' data-taskid='" + response.data[i].id + "'>Accept</a>&nbsp;&nbsp;&nbsp;";
+                content += "<a role='button' href='#reject_task' class='btn btn-sm btn-danger actionBtn' data-action='decline' data-toggle='modal' data-taskid='" + response.data[i].id + "'>Decline</a></td>";
                 content += "</tr>";
             }
             tableBody.html(content);
         }
 
-        $("#actionBtn").click(function () {
+        $(".actionBtn").click(function () {
             var button = $(this);
             var taskId = button.data("taskid");
+            var taskAction = button.data("action");
 
-            var formData = new FormData();
-            formData.append("action", "acceptTask");
-            formData.append("taskId", taskId);
+            if (taskAction == "decline") {
+                var form = $("#rejectTask");
+                form.submit(function (event) {
+                    event.preventDefault();
+                    var reason = $("#reason").val();
+                    var formData = new FormData();
+                    formData.append("action", "taskAction");
+                    formData.append("taskId", taskId);
+                    formData.append("taskAction", taskAction);
+                    formData.append("reason", reason);
 
-            var response = submitForm(formData, "POST");
-            if (response.type == "error") {
-                UIToastr.init('error', 'Request Error', 'Error Processing your Request!!');
+                    $(".submit").click(function () {
+                        var r = submitForm(formData, "POST");
+                        console.log(r);
+                    });
+                });
             } else {
-                UIToastr.init('success', 'Congrats!', response.message);
-                $("#row_" + taskId).remove();
+                var formData = new FormData();
+                formData.append("action", "taskAction");
+                formData.append("taskId", taskId);
+                formData.append("taskAction", taskAction);
+
+                var response = submitForm(formData, "POST");
+                if (response.type == "error") {
+                    UIToastr.init('error', 'Request Error', 'Error Processing your Request!!');
+                } else {
+                    UIToastr.init('success', 'Congrats!', response.message);
+                    $("#row_" + taskId).remove();
+                }
             }
         });
     }

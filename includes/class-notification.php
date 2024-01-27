@@ -70,11 +70,13 @@ if (!class_exists('Notification')) {
 					$db->where("masterTemplateId", $data["templateId"]);
 					$db->where("clientId", $data["active_account_id"]);
 					$template = $db->getValue(TBL_TEMPLATE_EMAIL, "templateContent");
+
 					$templateBody = $this->get_template_body($template, $data);
 				}
 				if (isset($data['body'])) {
 					$templateBody = $data['body'];
 				}
+
 				if (!isset($data['to'])) {
 					$db->where("userId", $data["identifierValue"]);
 					$to = $db->get(TBL_USERS, NULL, "user_email as email, display_name as name");
@@ -82,7 +84,7 @@ if (!class_exists('Notification')) {
 					$to = $data['to'];
 				}
 				$templateData = array(
-					"to" => [$to],
+					"to" => $to,
 					"from" => array(
 						"email" => $data["from"]["email"],
 						"name" => $data["from"]["name"]
@@ -91,6 +93,9 @@ if (!class_exists('Notification')) {
 					"email_body" => $templateBody,
 					"attachments" => $data["attachments"]
 				);
+				if (isset($data['to_others']['cc']) || isset($data['to_others']['cc']))
+					$templateData['to_others'] = (object)$data['to_others'];
+
 				$db->where("emailClientId", $data["active_email_id"]);
 				$client = $db->getValue(TBL_CLIENTS_EMAIL, "emailClientName");
 				$fileName = "class-mailer-" . str_replace(array(" ", "_"), "-", strtolower($client)) . ".php";

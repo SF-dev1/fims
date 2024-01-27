@@ -57,31 +57,8 @@ function menu_items()
 					"header" => array(
 						"css" => array(
 							"datatables/plugins/bootstrap/dataTables.bootstrap.css",
-							"datatables/extensions/fixedHeader/css/fixedHeader.dataTables.min.css",
-							"select2/select2.css",
-						),
-					),
-					"footer" => array(
-						"plugins" => array(
-							"select2/select2.min.js?v=" . $js_version,
-							"jquery-validation/js/jquery.validate.min.js?v=" . $js_version,
-							"datatables/media/js/jquery.dataTables-1.10.20.min.js?v=" . $js_version,
-							"datatables/extensions/fixedHeader/js/dataTables.fixedHeader.min.js?v=" . $js_version,
-							"datatables/plugins/bootstrap/dataTables.bootstrap.js?v=" . $js_version,
-						),
-						"scripts" => array(
-							"tasks.js?v=" . $js_version
-						),
-						"init" => array(
-							"Tasks.init('my_tasks');",
-						),
-					),
-				),
-				"approvals" => array(
-					"title" => "Approvals",
-					"href" => BASE_URL . "/tasks/approvals.php",
-					"header" => array(
-						"css" => array(
+							"datatables/extensions/Scroller/css/dataTables.scroller.min.css",
+							"datatables/extensions/ColReorder/css/dataTables.colReorder.min.css",
 							"datatables/plugins/bootstrap/dataTables.bootstrap.css",
 							"bootstrap-fileinput/bootstrap-fileinput.css",
 							"bootstrap-switch/css/bootstrap-switch.min.css",
@@ -91,10 +68,11 @@ function menu_items()
 					"footer" => array(
 						"plugins" => array(
 							"bootstrap-fileinput/bootstrap-fileinput.js?v=" . $js_version,
-							"datatables/media/js/jquery.dataTables-1.10.20.min.js?v=" . $js_version,
+							"datatables/media/js/jquery.dataTables.min.js?v=" . $js_version,
+							"datatables/extensions/TableTools/js/dataTables.tableTools.min.js?v=" . $js_version,
+							"datatables/extensions/ColReorder/js/dataTables.colReorder.min.js?v=" . $js_version,
+							"datatables/extensions/Scroller/js/dataTables.scroller.min.js?v=" . $js_version,
 							"datatables/plugins/bootstrap/dataTables.bootstrap.js?v=" . $js_version,
-							"bootstrap-switch/js/bootstrap-switch.min.js?v=" . $js_version,
-							"bootstrap-touchspin/bootstrap.touchspin.js?v=" . $js_version,
 							"jquery-validation/js/jquery.validate.min.js?v=" . $js_version,
 							"select2/select2.min.js?v=" . $js_version,
 						),
@@ -102,7 +80,43 @@ function menu_items()
 							"tasks.js?v=" . $js_version
 						),
 						"init" => array(
+							"Tasks.init('my_tasks');",
+							"TableAdvanced.init();",
+						),
+					),
+				),
+				"approvals" => array(
+					"title" => "Approvals",
+					"href" => BASE_URL . "/tasks/approvals.php",
+					"header" => array(
+						"css" => array(
+							"datatables/plugins/bootstrap/dataTables.bootstrap.css",
+							"datatables/extensions/Scroller/css/dataTables.scroller.min.css",
+							"datatables/extensions/ColReorder/css/dataTables.colReorder.min.css",
+							"datatables/plugins/bootstrap/dataTables.bootstrap.css",
+							"bootstrap-fileinput/bootstrap-fileinput.css",
+							"bootstrap-switch/css/bootstrap-switch.min.css",
+							"select2/select2.css",
+						),
+					),
+					"footer" => array(
+						"plugins" => array(
+							"bootstrap-fileinput/bootstrap-fileinput.js?v=" . $js_version,
+							"datatables/media/js/jquery.dataTables.min.js?v=" . $js_version,
+							"datatables/extensions/TableTools/js/dataTables.tableTools.min.js?v=" . $js_version,
+							"datatables/extensions/ColReorder/js/dataTables.colReorder.min.js?v=" . $js_version,
+							"datatables/extensions/Scroller/js/dataTables.scroller.min.js?v=" . $js_version,
+							"datatables/plugins/bootstrap/dataTables.bootstrap.js?v=" . $js_version,
+							"jquery-validation/js/jquery.validate.min.js?v=" . $js_version,
+							"select2/select2.min.js?v=" . $js_version,
+						),
+						"scripts" => array(
+							"tasks.js?v=" . $js_version,
+							"table-advanced.js?v=" . $js_version
+						),
+						"init" => array(
 							"Tasks.init('approvals');",
+							"TableAdvanced.init();",
 						),
 					),
 				),

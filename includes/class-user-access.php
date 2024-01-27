@@ -382,18 +382,17 @@ class userAccess
 
 		$db->where('userID', $userID);
 		$details = $db->getOne(TBL_USERS, array('user_email', 'user_login', 'user_activation_key', 'display_name', 'user_otp', 'user_mobile', 'party_id', 'user_role'));
-		$data = new stdClass();
-		$data->medium = 'email';
-		$to_emails = array(
+		$data = array();
+		$data["medium"] = ['email'];
+		$data["to"][] = array(
 			"email" => $details['user_email'],
 			'name' => $details['display_name']
 		);
-		$data->to[0] = (object)$to_emails;
 
 		if ($type == "reset_password") {
 			$verification_link = BASE_URL . '/recover/reset_password.php?token=' . $details['user_activation_key'];
-			$data->body = str_replace(array("##DISPLAYNAME##", "##EMAILTO##", "##EMAILVERIFICATIONLINK##"), array($details['display_name'], $details['user_email'], $verification_link), get_template('email', 'reset_password'));
-			$data->subject = 'Reset Password | FIMS';
+			$data["body"] = str_replace(array("##DISPLAYNAME##", "##EMAILTO##", "##EMAILVERIFICATIONLINK##"), array($details['display_name'], $details['user_email'], $verification_link), get_template('email', 'reset_password'));
+			$data["subject"] = 'Reset Password | FIMS';
 			$notification->send($data);
 		} elseif ($type == "email_verification") {
 			$activeEmailClientId = null;
@@ -416,34 +415,34 @@ class userAccess
 			$notification = new Notification();
 			$notification->send($data);
 		} elseif ($type == "mobile_verification") {
-			$data = array();
-			$db->where("option_key", "active_sms_account_id");
-			$data["active_sms_client"] = $db->getValue(TBL_OPTIONS, "option_value");
-			$data["medium"] = ["sms"];
-			$data["identifierType"] = "user_login";
-			$data["identifierValue"] = $details["user_login"];
-			$data["type"] = $type;
-			$data["contactNumber"] = "91" . $details["user_mobile"];
-			$notification = new Notification();
-			$notification->send($data);
+			// $data = array();
+			// $db->where("option_key", "active_sms_account_id");
+			// $data["active_sms_client"] = $db->getValue(TBL_OPTIONS, "option_value");
+			// $data["medium"] = ["sms"];
+			// $data["identifierType"] = "user_login";
+			// $data["identifierValue"] = $details["user_login"];
+			// $data["type"] = $type;
+			// $data["contactNumber"] = "91" . $details["user_mobile"];
+			// $notification = new Notification();
+			// $notification->send($data);
 		} elseif ($type == "device_approval") {
-			$data = array();
-			$db->where("option_key", "active_sms_account_id");
-			$data["active_sms_client"] = $db->getValue(TBL_OPTIONS, "option_value");
-			$data["medium"] = ["sms"];
-			$data["identifierType"] = "user_login";
-			$data["identifierValue"] = $details["user_login"];
-			$data["type"] = $type;
-			$data["contactNumber"] = "91" . $details["user_mobile"];
-			$notification = new Notification();
-			$notification->send($data);
+			// $data = array();
+			// $db->where("option_key", "active_sms_account_id");
+			// $data["active_sms_client"] = $db->getValue(TBL_OPTIONS, "option_value");
+			// $data["medium"] = ["sms"];
+			// $data["identifierType"] = "user_login";
+			// $data["identifierValue"] = $details["user_login"];
+			// $data["type"] = $type;
+			// $data["contactNumber"] = "91" . $details["user_mobile"];
+			// $notification = new Notification();
+			// $notification->send($data);
 		} else {
 			$data = array();
 			$db->where("option_key", "active_sms_account_id");
 			$data["active_sms_client"] = $db->getValue(TBL_OPTIONS, "option_value");
 			$data["type"] = "mobile_verification";
 			$data["contactNumber"] = "91" . $details["user_mobile"];
-			
+
 			$activeEmailClientId = null;
 			if (isset($details["activeEmailClientId"]))
 				$activeEmailClientId = $details["activeEmailClientId"];
@@ -461,9 +460,9 @@ class userAccess
 			$data["active_email_id"] = $activeEmailClientId;
 			$data["identifierType"] = "userID";
 			$data["identifierValue"] = $userID;
-			
+
 			$notification = new Notification();
-			$ssms = $notification->send($data);
+			// $ssms = $notification->send($data);
 
 			if ($ssms['type'] == "success") {
 				$sms_status = true;

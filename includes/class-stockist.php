@@ -128,10 +128,14 @@ class Stockist
 					$log->write('Inventory added ' . $inv_id . ' Inbound Inventory :: Lot# ' . $lot_details['lot_number'] . ' :: ' . sprintf('GRN_%06d', $grn_id), 'inventory-inbound');
 					$return[$inv_id] = 'success';
 					$db->where("user_role", "administrator");
-					$ids = $db->get(TBL_USERS, "userID");
+					$db->orWhere("user_role", "super_admin");
+					$ids = array_map(function ($innerArray) {
+						return $innerArray["userID"];
+					}, $db->get(TBL_USERS, null, "userID"));
 					$task = array(
 						"createdBy" => $current_user["userID"],
 						"title" => "Products Ready For Tagging",
+						"category" => "tagging",
 						"userRoles" => json_encode($ids),
 						"status" => "0"
 					);
@@ -214,7 +218,18 @@ class Stockist
 
 	public function update_inventory_status($inv_id, $status)
 	{
-		$details = array("inv_status" => trim($status));
+		if ($status == "qc_verified")
+			$location = "STKROM_00001";
+		if ($status == "qc_failed")
+			$location = "FAILED_00001";
+		if ($status == "qc_cooling")
+			$location = "COOLNG_00001";
+		if ($status == "components_requested")
+			$location = "CMPREQ_00001";
+		$details = array(
+			"inv_status" => trim($status),
+			"expectedLocation" => $location
+		);
 		return $this->update_inventory_details($inv_id, $details);
 	}
 
@@ -251,7 +266,7 @@ class Stockist
 		return number_format($db->getValue(TBL_INVENTORY, "AVG(item_price)"), 0, '.', '');
 	}
 
-	public function get_expected_location_status($status, $capacity)
+	public function get_expected_location_status($status, $capacity = 0)
 	{
 		global $db;
 		$locationTitle = "";
@@ -266,14 +281,17 @@ class Stockist
 			case 'printing':
 				$locationTitle = "Printing Area";
 				$db->where("locationTitle", $locationTitle, "LIKE");
-				$db->where("status", ["0", "1"], "IN"); // 0 => empty location, 1 => partially used location
-				$db->where("capacity", $capacity, ">="); // storage capacity of the location checking
-				$db->where("availability", $capacity, ">="); // available storage space at the location
 				$locationId = $db->getValue(TBL_INVENTORY_LOCATIONS, "locationId");
 				break;
 			case 'qc_pending':
+				$locationTitle = "Qc Room";
+				$db->where("locationTitle", $locationTitle, "LIKE");
+				$locationId = $db->getValue(TBL_INVENTORY_LOCATIONS, "locationId");
 				break;
 			case 'qc_cooling':
+				$locationTitle = "Qc Room";
+				$db->where("locationTitle", $locationTitle, "LIKE");
+				$locationId = $db->getValue(TBL_INVENTORY_LOCATIONS, "locationId");
 				break;
 			case 'qc_verified':
 				break;

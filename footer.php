@@ -55,8 +55,18 @@
 		// });
 		jQuery(document).ready(function() {
 			App.init(); // initlayout and core plugins
-			fetchData(base_url);
-			setInterval(fetchData(base_url), 1000);
+			fetchPendingApprovals();
+			addCoolingApprovals();
+			addVerifiedApprovals();
+			addFailedApprovals();
+			addComponentApprovals()();
+			setInterval(function() {
+				fetchPendingApprovals();
+				addCoolingApprovals();
+				addVerifiedApprovals();
+				addFailedApprovals();
+				addComponentApprovals()();
+			}, 1000 * 60 * 10);
 			// IdleTimeout.init("<?php echo BASE_URL; ?>", "<?php echo str_replace(BASE_URL, "", curPageURL()); ?>"); // initialize session timeout settings
 		});
 	</script>

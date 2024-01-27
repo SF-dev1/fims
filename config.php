@@ -19,12 +19,12 @@ $definer = array(
 	'ROOT_PATH' => dirname(__FILE__),
 	'BASE_URL' => 'http://localhost/fims-live',
 	'IMAGE_URL' => 'https://www.skmienterprise.com/fims',
-	'LOG_PATH' => dirname(__FILE__).'/log/',
-	'TODAYS_LOG_PATH' => dirname(__FILE__).'/log/'.date("Y", time()).'/'.date("M", time()).'/'.date("d", time()).$test,
-	'TODAYS_NOTIFICATION_PATH' => dirname(__FILE__).'/log/notifications/'.date("Y", time()).'/'.date("M", time()).'/'.date("d", time()).$test,
-	'TODAYS_PICKLIST_PATH' => dirname(__FILE__).'/labels/picklists/'.date("Y", time()).'/'.date("M", time()).'/'.date("d", time()).$test,
-	'TODAYS_STOCKIST_PATH' => dirname(__FILE__).'/log/'.date("Y", time()).'/'.date("M", time()).'/'.date("d", time()).'/stockist'.$test,
-	'UPLOAD_PATH' => dirname(__FILE__).'/uploads',
+	'LOG_PATH' => dirname(__FILE__) . '/log/',
+	'TODAYS_LOG_PATH' => dirname(__FILE__) . '/log/' . date("Y", time()) . '/' . date("M", time()) . '/' . date("d", time()) . $test,
+	'TODAYS_NOTIFICATION_PATH' => dirname(__FILE__) . '/log/notifications/' . date("Y", time()) . '/' . date("M", time()) . '/' . date("d", time()) . $test,
+	'TODAYS_PICKLIST_PATH' => dirname(__FILE__) . '/labels/picklists/' . date("Y", time()) . '/' . date("M", time()) . '/' . date("d", time()) . $test,
+	'TODAYS_STOCKIST_PATH' => dirname(__FILE__) . '/log/' . date("Y", time()) . '/' . date("M", time()) . '/' . date("d", time()) . '/stockist' . $test,
+	'UPLOAD_PATH' => dirname(__FILE__) . '/uploads',
 	// DATABASE
 	'DB_PORT' => 3306,
 	'DB_HOST' => 'localhost',
@@ -50,7 +50,7 @@ if ($_SERVER['SERVER_NAME'] == "fims-live.com") { // LINUX DEV
 }
 
 // LIVE
-if($_SERVER['SERVER_NAME'] == "www.skmienterprise.com"){
+if ($_SERVER['SERVER_NAME'] == "www.skmienterprise.com" || $_SERVER['SERVER_NAME'] == "skmienterprise.com") {
 	$definer['LOG_PATH'] = '/var/www/skmienterprise/fims/log/';
 	$definer['TODAYS_LOG_PATH'] = '/var/www/skmienterprise/fims/log/' . date("Y", time()) . '/' . date("M", time()) . '/' . date("d", time()) . $test;
 	$definer['TODAYS_NOTIFICATION_PATH'] = '/var/www/skmienterprise/fims/log/notifications/' . date("Y", time()) . '/' . date("M", time()) . '/' . date("d", time()) . $test;
@@ -59,7 +59,7 @@ if($_SERVER['SERVER_NAME'] == "www.skmienterprise.com"){
 	$definer['UPLOAD_PATH'] = '/var/www/skmienterprise/fims/uploads';
 }
 
-if ($_SERVER['SERVER_NAME'] == "www.skmienterprise.com" || strpos($_SERVER['PHP_SELF'], 'fims-sand')) { // PRODUCTION
+if ($_SERVER['SERVER_NAME'] == "www.skmienterprise.com" || $_SERVER['SERVER_NAME'] == "skmienterprise.com" || strpos($_SERVER['PHP_SELF'], 'fims-sand')) { // PRODUCTION
 	$definer['BASE_URL'] = 'https://www.skmienterprise.com/fims';
 	$definer['DB_HOST'] = 'fims.cy9ut4zgz1ip.us-east-1.rds.amazonaws.com';
 	$definer['DB_USER'] = 'root';
