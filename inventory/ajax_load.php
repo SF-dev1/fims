@@ -876,9 +876,6 @@ if (isset($_REQUEST['action'])) {
 					'inv_status' => 'qc_failed',
 				);
 				$log_details = $issue_ids;
-				// ******************************
-				// Add task to repairing
-				// ******************************
 			} else {
 				if ($current_status == "qc_cooling") {
 					$inv_status = 'qc_verified';
@@ -1862,6 +1859,92 @@ if (isset($_REQUEST['action'])) {
 			// exit;
 			// var_dump($data);
 			echo json_encode(array('data' => $data));
+			break;
+
+		case 'setLocationSku':
+			// error_reporting(E_ALL);
+			// ini_set('display_errors', '1');
+			// echo '<pre>';
+			$sku = $_REQUEST["sku"];
+			$location = $_REQUEST["locationId"];
+
+			$details = array(
+				"sku" => $sku,
+				"locationId" => $location
+			);
+			$id = $db->insert(TBL_LOCATION_ASSIGNMENTS, $details);
+
+			if ($id) {
+				$return = array("type" => "success", "message" => "Location mapped successfully!");
+			} else {
+				$return = array("type" => "error", "message" => "Error in Location Location Mapping!");
+			}
+			echo json_encode($return);
+			break;
+
+		case 'getLocations':
+			// error_reporting(E_ALL);
+			// ini_set('display_errors', '1');
+			// echo '<pre>';
+			$db->join(TBL_LOCATION_ASSIGNMENTS . " la", "la.locationId = l.locationId", "LEFT");
+			$db->where("l.locationId", "CMPREQ_%", "LIKE");
+			$db->orWhere("l.locationId", "FAILED_%", "LIKE");
+			$db->orderBy("l.locationId", "ASC");
+			$data = $db->get(TBL_INVENTORY_LOCATIONS . " l", null, "l.locationId, la.sku");
+			echo json_encode(["type" => "success", "data" => $data]);
+			break;
+
+		case 'getSKU':
+			$data = $db->get(TBL_PRODUCTS_MASTER, null, "sku");
+			echo json_encode(["type" => "success", "data" => $data]);
+			break;
+
+
+		case 'add_location':
+			// error_reporting(E_ALL);
+			// ini_set('display_errors', '1');
+			// echo '<pre>';
+			$category = $_REQUEST["category"];
+			$capacity = $_REQUEST["capacity"];
+			$locationId = "";
+
+			switch ($category) {
+				case 'components_requested';
+					$db->where("locationId", "CMPREQ%", "LIKE");
+					$count = (int) $db->getValue(TBL_INVENTORY_LOCATIONS, "count(id)");
+					$nextId = ($count + 1);
+					$title = "Components Requested Product Area " . sprintf("%03d", $nextId);
+					$locationId = "CMPREQ_" . sprintf("%05d", $nextId);
+					$details = array(
+						"locationId" => $locationId,
+						"locationTitle" => $title,
+						"capacity" => $capacity,
+						"availability" => $capacity,
+						"createdBy" => $current_user["userID"]
+					);
+
+					$db->insert(TBL_INVENTORY_LOCATIONS, $details);
+					break;
+
+				case 'qc_failed';
+					$db->where("locationId", "FAILED%", "LIKE");
+					$count = (int) $db->getValue(TBL_INVENTORY_LOCATIONS, "count(id)");
+					$nextId = ($count + 1);
+					$title = "Repairable Inventory Area " . sprintf("%03d", $nextId);
+					$locationId = "FAILED_" . sprintf("%05d", $nextId);
+					$details = array(
+						"locationId" => $locationId,
+						"locationTitle" => $title,
+						"capacity" => $capacity,
+						"availability" => $capacity,
+						"createdBy" => $current_user["userID"]
+					);
+
+					$db->insert(TBL_INVENTORY_LOCATIONS, $details);
+					break;
+			}
+
+			echo json_encode(["type" => "success", "message" => "Location successfully added.\nLocation ID: " . $locationId]);
 			break;
 	}
 } else {

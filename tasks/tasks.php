@@ -17,18 +17,24 @@ include_once(ROOT_PATH . '/header.php');
         <!-- END PAGE HEADER-->
         <!-- BEGIN PAGE CONTENT-->
         <div class="row">
-            <div class="table-scrollable">
-                <table class="table table-striped table-bordered table-hover" id="myTasks">
-                    <thead>
-                        <th>#</th>
-                        <th>Task Title</th>
-                        <th>Create By</th>
-                        <th>Reaction Reason</th>
-                        <th>Status</th>
-                        <th>action</th>
-                    </thead>
-                    <tbody id="taskBody"></tbody>
-                </table>
+            <div class="portlet">
+                <div class="portlet-title">
+                    <strong>My Tasks</strong>
+                </div>
+                <div class="portlet-body">
+                    <table class="table table-striped table-bordered table-hover dataTable no-footer" id="sample_1">
+                        <thead>
+                            <th>#</th>
+                            <th>Task Title</th>
+                            <th>Cartoon ID</th>
+                            <th>Create By</th>
+                            <th>Reaction Reason</th>
+                            <th>Status</th>
+                            <th>action</th>
+                        </thead>
+                        <tbody id="taskBody"></tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>

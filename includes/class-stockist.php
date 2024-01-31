@@ -218,18 +218,25 @@ class Stockist
 
 	public function update_inventory_status($inv_id, $status)
 	{
+		global $db;
+		$details = array(
+			"inv_status" => trim($status)
+		);
 		if ($status == "qc_verified")
 			$location = "STKROM_00001";
-		if ($status == "qc_failed")
-			$location = "FAILED_00001";
+		if ($status == "qc_failed") {
+			$db->join(TBL_PRODUCTS_MASTER . " pm", 'pm.pid = i.item_id');
+			$db->where("i.inv_id", $inv_id);
+			$sku = $db->getValue(TBL_INVENTORY . " i", "pm.sku");
+			$location = $this->get_expected_location_status('qc_failed', 0, $sku);
+			$details["box_id"] = null;
+			$details["ctn_id"] = "2";
+		}
 		if ($status == "qc_cooling")
 			$location = "COOLNG_00001";
 		if ($status == "components_requested")
 			$location = "CMPREQ_00001";
-		$details = array(
-			"inv_status" => trim($status),
-			"expectedLocation" => $location
-		);
+		$details["expectedLocation"] = $location;
 		return $this->update_inventory_details($inv_id, $details);
 	}
 
@@ -266,20 +273,20 @@ class Stockist
 		return number_format($db->getValue(TBL_INVENTORY, "AVG(item_price)"), 0, '.', '');
 	}
 
-	public function get_expected_location_status($status, $capacity = 0)
+	public function get_expected_location_status($status, $capacity = 0, $sku = null)
 	{
 		global $db;
 		$locationTitle = "";
 		switch ($status) {
 			case 'inbound':
-				$locationTitle = "Warehouse Location";
+				$locationTitle = "Warehouse Location%";
 				$db->where("locationTitle", $locationTitle, "LIKE");
 				$db->where("status", "0"); // 0 => empty location
 				$db->where("capacity", $capacity, ">="); // storage capacity of the location checking
 				$locationId = $db->getValue(TBL_INVENTORY_LOCATIONS, "locationId");
 				break;
 			case 'printing':
-				$locationTitle = "Printing Area";
+				$locationTitle = "Printing Area%";
 				$db->where("locationTitle", $locationTitle, "LIKE");
 				$locationId = $db->getValue(TBL_INVENTORY_LOCATIONS, "locationId");
 				break;
@@ -296,6 +303,12 @@ class Stockist
 			case 'qc_verified':
 				break;
 			case 'qc_failed':
+				$locationId = "FAILED%";
+				$db->join(TBL_LOCATION_ASSIGNMENTS . " la", "la.locationId = l.locationId");
+				$db->where("la.sku", $sku);
+				$db->where("l.locationId", $locationId, "LIKE");
+				$db->where("l.availability", "0", ">");
+				$locationId = $db->getValue(TBL_INVENTORY_LOCATIONS, "locationId");
 				break;
 			case 'components_requested':
 				break;

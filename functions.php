@@ -77,7 +77,8 @@ function menu_items()
 							"select2/select2.min.js?v=" . $js_version,
 						),
 						"scripts" => array(
-							"tasks.js?v=" . $js_version
+							"tasks.js?v=" . $js_version,
+							"table-advanced.js?v=" . $js_version
 						),
 						"init" => array(
 							"Tasks.init('my_tasks');",
@@ -120,7 +121,6 @@ function menu_items()
 						),
 					),
 				),
-
 			),
 		),
 		"products" => array(
@@ -344,6 +344,41 @@ function menu_items()
 						),
 						"init" => array(
 							'Inventory.init("content");'
+						),
+					),
+				),
+				"location_allocation" => array(
+					"title" => "Location Allocation",
+					"href" => BASE_URL . "/inventory/location.php",
+					"header" => array(
+						"css" => array(
+							"datatables/plugins/bootstrap/dataTables.bootstrap.css",
+							"datatables/extensions/Scroller/css/dataTables.scroller.min.css",
+							"datatables/extensions/ColReorder/css/dataTables.colReorder.min.css",
+							"datatables/plugins/bootstrap/dataTables.bootstrap.css",
+							"bootstrap-fileinput/bootstrap-fileinput.css",
+							"bootstrap-switch/css/bootstrap-switch.min.css",
+							"select2/select2.css",
+						),
+					),
+					"footer" => array(
+						"plugins" => array(
+							"bootstrap-fileinput/bootstrap-fileinput.js?v=" . $js_version,
+							"datatables/media/js/jquery.dataTables.min.js?v=" . $js_version,
+							"datatables/extensions/TableTools/js/dataTables.tableTools.min.js?v=" . $js_version,
+							"datatables/extensions/ColReorder/js/dataTables.colReorder.min.js?v=" . $js_version,
+							"datatables/extensions/Scroller/js/dataTables.scroller.min.js?v=" . $js_version,
+							"datatables/plugins/bootstrap/dataTables.bootstrap.js?v=" . $js_version,
+							"jquery-validation/js/jquery.validate.min.js?v=" . $js_version,
+							"select2/select2.min.js?v=" . $js_version,
+						),
+						"scripts" => array(
+							"inventory.js?v=" . $js_version,
+							"table-advanced.js?v=" . $js_version
+						),
+						"init" => array(
+							'Inventory.init("map_location");',
+							"TableAdvanced.init();",
 						),
 					),
 				),

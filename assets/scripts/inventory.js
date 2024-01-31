@@ -2633,7 +2633,7 @@ var Inventory = function () {
 				var s = submitForm(formData, "POST");
 				if (s.type == "success" || s.type == "error" || s.type == "info") {
 					$('.uid').val("");
-					UIToastr.init(s.type, 'Audit', 's.msg');
+					UIToastr.init(s.type, 'Audit', s.msg);
 					if (s.type != "success")
 						audio.play();
 
@@ -3282,6 +3282,144 @@ var Inventory = function () {
 		});
 	}
 
+	function mapLocation_handleInit() {
+
+		var tableData = new FormData();
+		tableData.append('action', 'getLocations');
+
+		var response = submitForm(tableData, "POST");
+		if (response.type == "success") {
+			var content = "";
+			var count = 0;
+			console.log(response);
+			response.data.forEach(element => {
+				++count;
+				content += "<tr id='row_" + count + "'>";
+				content += "<td>" + count + "</td>";
+				content += "<td>" + element.locationId + "</td>";
+				content += "<td><div class='sku" + count + "'>" + (element.sku == null ? "<span class='badge badge-dabner'>Not Assigned</span>" : element.sku) + "<div></td>";
+				content += "<td><div class='skuAction" + count + "'><button data-rowid='" + count + "' class=\"edit btn btn-default btn-xs purple\" title=\"Edit\"><i class=\"fa fa-edit\"></i></button></div></td>";
+				content += "</tr>";
+			});
+		}
+		$("#locationBody").html(content);
+
+		$(".edit").click(function () {
+			var button = $(this);
+			var row = $(this).data("rowid");
+			var locationId = $("#row_" + row).find("td:eq(1)").text();
+			var defaultSku = $('.sku' + row).html();
+
+			var buttons = "<button class=\"btn btn-default btn-xs purple skuActionSuccess" + row + "\" title=\"save\"><i class=\"fa fa-check\"></i></button><button class=\"btn btn-default btn-xs purple skuActionCancel" + row + "\" title=\"cancel\"><i class=\"fa fa-times\"></i></button>";
+			$(this).hide();
+			$(".skuAction" + row).html(buttons);
+			var formData = new FormData();
+			formData.append("action", "getSKU");
+			var response = submitForm(formData, "POST");
+			if (response.type == "success") {
+				var options = "";
+				response.data.forEach(element => {
+					options += "<option value='" + element.sku + "'>" + element.sku + "</option>";
+				});
+				var select = "<select class=\"skuValue form-control select2me\">" + options + "</select>"
+
+				$('.sku' + row).html(select);
+			}
+			$(".skuActionSuccess" + row).click(function () {
+				var sku = $(".skuValue").val();
+				var updateData = new FormData();
+				updateData.append("action", "setLocationSku");
+				updateData.append("locationId", locationId);
+				updateData.append("sku", sku);
+
+				var response = submitForm(updateData, "POST");
+				if (response.type == "success") {
+					UIToastr.init('success', 'Mapping Completed', response.message);
+					$('.sku' + row).html(sku);
+					$(".skuAction" + row).html("<button data-rowid='" + row + "' class=\"edit btn btn-default btn-xs purple\" title=\"Edit\"><i class=\"fa fa-edit\"></i></button>");
+					button.show();
+				} else {
+					UIToastr.init('error', 'Opps! Something went wrong.', response.message);
+				}
+			});
+			$(".skuActionCancel" + row).click(function () {
+				$('.sku' + row).html(defaultSku);
+				$(".skuAction" + row).html("<button data-rowid='" + row + "' class=\"edit btn btn-default btn-xs purple\" title=\"Edit\"><i class=\"fa fa-edit\"></i></button>");
+			});
+		});
+
+		/*
+		$("#map_location").submit(function (e) {
+			e.preventDefault();
+
+			var category = $("#category").val();
+			var sku = $("#sku").val();
+			var location = $("#location").val();
+
+			var formData = new FormData();
+			formData.append("action", "map_location");
+			formData.append("category", category);
+			formData.append("sku", sku);
+			formData.append("location", location);
+
+			var response = submitForm(formData, "POST");
+			if (response.type == "success") {
+				UIToastr.init('success', 'mapping Completed', response.message);
+			} else {
+				UIToastr.init('error', 'Something went wrong', response.message);
+			}
+		});*/
+
+		$("#add_location").submit(function (event) {
+			event.preventDefault();
+			$("#add_location .btn-success").html("<i class='fa fa-sync fa-spin'></i>").prop("disabled", true);
+
+			var category = $("#category").val();
+			var capacity = $("#capacity").val();
+
+			var formData = new FormData();
+			formData.append("action", "add_location");
+			formData.append("category", category);
+			formData.append("capacity", capacity);
+			window.setTimeout(function () {
+				var response = submitForm(formData, "POST");
+				if (response.type == "success") {
+					// window.setTimeout(function () {
+
+					$("#add-location").modal("hide");
+					$("#add_location .btn-success").html("Submit").prop("disabled", false);
+					UIToastr.init('success', 'mapping Completed', response.message);
+					// }, 200);
+				} else {
+					UIToastr.init('error', 'Something went wrong', response.message);
+				}
+			}, 100);
+			window.location.reload();
+			window.setTimeout(function () {
+				var content = "";
+				var tableData = new FormData();
+				tableData.append('action', 'getLocations');
+				var response = submitForm(tableData, "POST");
+				if (response.type == "success") {
+					var count = 0;
+					console.log(response);
+					response.data.forEach(element => {
+						++count;
+						content += "<tr id='row_" + count + "'>";
+						content += "<td>" + count + "updated</td>";
+						content += "<td>" + element.locationId + "</td>";
+						content += "<td><div class='sku" + count + "'>" + (element.sku == null ? "<span class='badge badge-danger'>Not Assigned</span>" : element.sku) + "<div></td>";
+						content += "<td><div class='skuAction" + count + "'><button data-rowid='" + count + "' class=\"edit btn btn-default btn-xs purple\" title=\"Edit\"><i class=\"fa fa-edit\"></i></button></div></td>";
+						content += "</tr>";
+					});
+				}
+				$("#locationBody").html(content);
+				TableAdvanced.init();
+
+			}, 100);
+		});
+	}
+
 	return {
 		init: function (type) {
 			switch (type) {
@@ -3363,6 +3501,10 @@ var Inventory = function () {
 
 				case "analytics":
 					stockAnalytics_handleInit();
+					break;
+
+				case "map_location":
+					mapLocation_handleInit();
 					break;
 			}
 		}

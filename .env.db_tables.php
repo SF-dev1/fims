@@ -43,6 +43,7 @@ $definer = array(
 	'TBL_INVENTORY_STATE' => 'bas_inventory_state',
 	'TBL_INVENTORY_COMPONENTS' => 'bas_inventory_components',
 	'TBL_INVENTORY_LOCATIONS' => 'bas_inventory_locations',
+	'TBL_LOCATION_ASSIGNMENTS' => 'bas_location_assignments',
 	'TBL_LOGIN_ATTEMPTS' => 'bas_login_attempts',
 	'TBL_MP_FEES' => 'bas_mp_fees',
 	'TBL_MS_ACCOUNTS' => 'bas_ms_accounts',

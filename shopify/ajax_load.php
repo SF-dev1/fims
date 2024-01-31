@@ -63,14 +63,104 @@ if (isset($_REQUEST['action'])) {
 			$reason = $_POST['comment'];
 			$orderId = $_POST['orderId'];
 
-			// $sp = new shopify_dashboard($account);
-			// CHECK & CANCEL FULFILLMENT
-			// CREATE RETURN IF ALREADY PACKED/RTD/SHIPPED BUT NOT PICKEDUP
-			// CHECK IF CANCELLING REPLACEMENT
-			// CHECK & REFUND ORDER
-			// CANCEL ORDER
-			echo json_encode(array('type' => 'success'));
+			$db->startTransaction();
+
+			try {
+				$sp = new shopify_dashboard($account);
+				$db->join(TBL_SP_ORDERS . " o", "o.orderId = f.orderId");
+				$db->join(TBL_SP_ACCOUNTS . ' a', 'a.account_id=o.accountId');
+				$db->join(TBL_SP_PAYMENTS_GATEWAY . ' pg', 'pg.pg_provider_id=a.account_active_refund_pg_id');
+
+				$db->where("f.orderId", $orderId);
+				$db->where("f.fulfillmentType", "forward");
+				$db->where("f.fulfillmentStatus", "cancelled", "!=");
+				$db->where("f.channel", "shopify");
+				$order = $db->getOne(TBL_FULFILLMENT . " f", "f.*, o.*, a.account_active_whatsapp_id");
+				$logisticDetails = json_decode($order["lpShipmentDetails"], true);
+
+				$fulfillment = $sp->cancel_fulfilment($orderId);
+				$logisticPartner->cancelShipment($logisticDetails["awb_code"]);
+				$data = array();
+				$data["idenifierType"] = "orderId";
+				$data["idenifierValue"] = $orderId;
+				$data["medium"] = ["whatsapp"];
+				$data["active_whatsapp_id"] = $order["account_active_whatsapp_id"];
+				$data["templateId"] = get_template_id_by_name("order_cancelled");
+				$notification = new Notification();
+				$notification->send($data);
+
+				if ($order["replacementOrder"]) {
+					$original_order = find_initial_order($order["orderItemId"]);
+					if ($original_order["paymentType"] == "cod") {
+						if (!is_null($original_order["refundId"])) { // CANCEL PREVIOUS LINK
+							$response = $api->PayoutLink->fetch($original_order["refundId"])->cancel();
+							$data = array(
+								'refundStatus' => $response->status,
+								'cancelledDate' => $db->now()
+							);
+							$db->where('refundId', $original_order["refundId"]);
+							$db->update(TBL_SP_REFUNDS, $data);
+						}
+						$refund_amount = (($original_order->totalPrice - $original_order->shippingCharge - $original_order->paymentGatewayDiscount));
+
+						$customer_details = json_decode($original_order["billingAddress"], true);
+						$payment_details = array(
+							'account_number' => $original_order["pg_provider_account"],
+							'amount' => (int) $refund_amount * 100,
+							'currency' => 'INR',
+							'accept_partial' => false,
+							'description' => 'Refund for Sylvi Order #' . $original_order["orderNumberFormated"],
+							'contact' => array(
+								"type" => "customer",
+								'name' => $customer_details["name"],
+								'email' => $customer_details["email"],
+								'contact' => substr(str_replace(array('+', ' '), '', $customer_details["phone"]), -10),
+							),
+							'send_sms' => true,
+							'send_email' => true,
+							"purpose" => "refund",
+							'reminder_enable' => true,
+							'notes' => array(),
+						);
+						$response = $api->PayoutLink->create($payment_details);
+						$log->write(json_encode($response), 'shopify-refund');
+						$data = array(
+							'refundId' => $response->id,
+							'orderId' => $original_order["orderId"],
+							'orderItemId' => $original_order["orderItemId"],
+							'refundLinkURL' => $response->short_url,
+							'refundStatus' => $response->status,
+							'refundAmount' => $refund_amount,
+							'refundPg' => $original_order["pg_provider_id"],
+							'createdDate' => $db->now()
+						);
+						$db->insert(TBL_SP_REFUNDS, $data);
+
+						// ADD REFUND DETAILS TO COMMENT 
+						$comment_data = array(
+							'comment' => 'Refund Initiated\r\nRef: ' . $response->short_url . '\r\nAmt: ' . $refund_amount,
+							'orderId' => $original_order["orderId"],
+							'commentFor' => 'refund',
+							'userId' => $current_user['userID'],
+						);
+						$db->insert(TBL_SP_COMMENTS, $comment_data);
+					}
+				} else if ($order["paymentType"] == "prepaid") {
+					$data["templateId"] = get_template_id_by_name("replcement_refund");
+					$notification->send($data);
+				}
+				$db->where("orderId", $orderId);
+				$db->update(TBL_SP_ORDERS, array("status", "cancelled"));
+				$db->where("orderId", $orderId);
+				$db->update(TBL_FULFILLMENT, array("fulfillmentStatus", "cancelled"));
+				$db->commit();
+				echo json_encode(array('type' => 'success'));
+			} catch (Exception $e) {
+				echo json_encode(array('type' => 'error'));
+				$db->rollback();
+			}
 			break;
+
 
 		case 'add_order_to_logistic_aggregator':
 			$orderId = $_POST['orderId'];
@@ -1410,7 +1500,7 @@ if (isset($_REQUEST['action'])) {
 					$discount_code = array_intersect($discountCodes, $fathers_day_discount_codes);
 					if (!empty($discount_code)) {
 						$gift_box = '<div class="form-group item-info original_sku">
-														<div class="col-md-12 gift">' . $gift_box_svg . ' - Gift Card ['.implode(", ", $discount_code).']</div>
+														<div class="col-md-12 gift">' . $gift_box_svg . ' - Gift Card [' . implode(", ", $discount_code) . ']</div>
 													</div>';
 					}
 
