@@ -82,7 +82,6 @@ function menu_items()
 						),
 						"init" => array(
 							"Tasks.init('my_tasks');",
-							"TableAdvanced.init();",
 						),
 					),
 				),
@@ -117,7 +116,6 @@ function menu_items()
 						),
 						"init" => array(
 							"Tasks.init('approvals');",
-							"TableAdvanced.init();",
 						),
 					),
 				),
@@ -555,6 +553,29 @@ function menu_items()
 						),
 						"init" => array(
 							'Inventory.init("quality_check");'
+						),
+					),
+				),
+				"quality_reject" => array(
+					"title" => "Quality Reject",
+					"href" => BASE_URL . "/inventory/quality_reject.php",
+					"header" => array(
+						"css" => array(
+							"jquery-multi-select/css/multi-select.css",
+						),
+					),
+					"footer" => array(
+						"plugins" => array(
+							"hotkeys/hotkeys.js?v=" . $js_version
+						),
+						"scripts" => array(
+							"inventory.js?v=" . $js_version => array(
+								'var image_url = "' . IMAGE_URL . '";',
+								'var issues = ' . json_encode(get_qc_issues()) . ';',
+							),
+						),
+						"init" => array(
+							'Inventory.init("quality_reject");'
 						),
 					),
 				),

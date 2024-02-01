@@ -524,9 +524,9 @@ if (isset($_REQUEST['action']) && trim($_REQUEST['action']) != "") {
 			break;
 
 		case 'save_grn':
-			// error_reporting(E_ALL);
-			// ini_set('display_errors', '1');
-			// echo '<pre>';
+			error_reporting(E_ALL);
+			ini_set('display_errors', '1');
+			echo '<pre>';
 			$lineitems = $_POST['lineitems'];
 			$status = ($_POST['type'] == "create") ? 'created' : 'draft';
 			$lot_id = $_POST['lot_id'];

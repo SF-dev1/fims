@@ -27,7 +27,8 @@ include_once(ROOT_PATH . '/header.php');
                             <th>#</th>
                             <th>Task Title</th>
                             <th>Cartoon ID</th>
-                            <th>Create By</th>
+                            <th>Quantity</th>
+                            <th>Assigned To</th>
                             <th>Reaction Reason</th>
                             <th>Status</th>
                             <th>action</th>

@@ -9,172 +9,94 @@ if (isset($_REQUEST['action'])) {
 
     switch ($_REQUEST['action']) {
         case 'getTasks':
-            $db->join(TBL_USERS . " u", "u.userID = t.createdBy", "LEFT");
-            $db->where("t.userId", $current_user["userID"]);
-            $tasks = $db->get(TBL_TASKS . " t", null, "t.*, u.display_name as name");
-
-            echo json_encode(["type" => "success", "data" => $tasks]);
-            break;
-
-        case 'getApprovals':
-            $db->join(TBL_USERS . " u", "u.userID = t.createdBy", "LEFT");
-            $db->join(TBL_INVENTORY . " i", "i.ctn_id = t.ctnId", "LEFT");
-            $db->where("(t.userRoles LIKE ? OR t.userRoles LIKE ?)", ["%" . $current_user["userID"] . ",%", "%" . $current_user["userID"] . "]%"]);
-            $db->where("t.userId", null, "IS");
-            $db->where("t.rejectReason", null, "IS");
-            $db->groupBy("i.inv_status");
-            $db->groupBy("t.id");
-            $db->groupBy("i.expectedLocation");
-            $tasks = $db->get(TBL_TASKS . " t", null, "t.*, u.display_name as name, i.expectedLocation, count(i.inv_id) as count");
-
-            echo json_encode(["type" => "success", "data" => $tasks]);
-            break;
-
-        case 'addCoolingEndTask':
-            $db->join(TBL_INVENTORY_LOG . " l", "l.inv_id = i.inv_id");
-            $db->where("i.inv_status", "qc_cooling");
-            $db->groupBy("i.ctn_id");
-            $db->orderBy("MAX(l.invi_id)");
-            $cartoons = $db->get(TBL_INVENTORY . " i", null, "i.ctn_id");
-
-            $db->where("user_role", "qc");
-            $db->orWhere("user_role", "super_admin");
-            $ids = array_map(function ($innerArray) {
-                return $innerArray["userID"];
-            }, $db->get(TBL_USERS, null, "userID"));
-            $details = array();
-            foreach ($cartoons as $cartoon) {
-                $details[] = array(
-                    "createdBy" => "0",
-                    "title" => "Products Ready For QC Verification",
-                    "ctnId" => $cartoon["ctn_id"],
-                    "category" => "qc_cooling",
-                    "userRoles" => json_encode($ids),
-                    "status" => "0"
-                );
-            }
-            try {
-                $ids = $db->insertMulti(TBL_TASKS, $details);
-            } catch (Exception $e) {
-            }
-
-            echo json_encode(["type" => "success", "message" => "task Added Successfully"]);
-            break;
-
-        case 'addQcVerifiedTask':
-            $db->join(TBL_INVENTORY_LOG . " l", "l.inv_id = i.inv_id");
-            $db->where("i.inv_status", "qc_verified");
-            $db->where("l.log_type", "qc_failed");
-            $db->groupBy("i.ctn_id");
-            $db->orderBy("MAX(l.invi_id)");
-            $cartoons = $db->get(TBL_INVENTORY . " i", null, "i.ctn_id");
-
-            $db->where("user_role", "warehouse_operations");
-            $db->orWhere("user_role", "super_admin");
-            $ids = array_map(function ($innerArray) {
-                return $innerArray["userID"];
-            }, $db->get(TBL_USERS, null, "userID"));
-            $details = array();
-            foreach ($cartoons as $cartoon) {
-                $details[] = array(
-                    "createdBy" => "0",
-                    "title" => "Products Ready For Sale",
-                    "ctnId" => $cartoon["ctn_id"],
-                    "category" => "qc_verified",
-                    "userRoles" => json_encode($ids),
-                    "status" => "0"
-                );
-            }
-            try {
-                $ids = $db->insertMulti(TBL_TASKS, $details);
-            } catch (Exception $e) {
-            }
-
-            echo json_encode(["type" => "success", "message" => "task Added Successfully"]);
-            break;
-
-        case 'addQcFailedTask':
-            $db->join(TBL_INVENTORY_LOG . " l", "l.inv_id = i.inv_id");
-            $db->where("i.inv_status", "qc_failed");
-            $db->where("l.log_type", "qc_failed");
-            $products = $db->get(TBL_INVENTORY . " i", null, "i.inv_id, i.ctn_id");
-
-            $db->where("category", "qc_failed");
-            $db->where("status", "0");
-            if ($db->has(TBL_TASKS)) {
-                $details = array(
-                    "title" => count($products) . " products have some issue",
-                );
-                $db->where("category", "qc_failed");
-                $db->update(TBL_TASKS, $details);
-            } else {
-                $db->where("user_role", "warehouse_operations");
-                $db->orWhere("user_role", "repairs");
-                $ids = array_map(function ($innerArray) {
-                    return $innerArray["userID"];
-                }, $db->get(TBL_USERS, null, "userID"));
-                $details = array();
-                $details = array(
-                    "createdBy" => "0",
-                    "title" => count($products) . " products have some issue",
-                    "ctnId" => $products[0]["ctn_id"],
-                    "category" => "qc_failed",
-                    "userRoles" => json_encode($ids),
-                    "status" => "0"
-                );
-                $db->insert(TBL_TASKS, $details);
-            }
-
-            echo json_encode(["type" => "success", "message" => "task Added Successfully"]);
-            break;
-
-        case 'addComponentRequestedTask':
             // error_reporting(E_ALL);
             // ini_set('display_errors', '1');
             // echo '<pre>';
-            $db->where("inv_status", "components_requested");
-            $products = $db->get(TBL_INVENTORY, null, "inv_id, ctn_id");
-
-            $db->where("category", "components_requested");
-            $db->where("status", "0");
-            if ($db->has(TBL_TASKS)) {
-                $details = array(
-                    "title" => count($products) . " products are in components required state",
-                );
-                $db->where("category", "components_requested");
-                $db->update(TBL_TASKS, $details);
+            $db->join(TBL_USERS . " u", "u.userID = t.userID", "LEFT");
+            $db->join(TBL_INVENTORY . " i", "i.ctn_id = t.ctnId", "LEFT");
+            $flag = true;
+            if ($current_user["user_role"] != "super_admin") {
+                $db->where("t.userRoles LIKE ?", $current_user["user_role"]);
+                $flag = false;
             } else {
-                $details = array(
-                    "createdBy" => "0",
-                    "title" => count($products) . " products are in components required state",
-                    "ctnId" => $products[0]["ctn_id"],
-                    "category" => "components_requested",
-                    "userRoles" => "[2]",
-                    "status" => "0"
-                );
-                $db->insert(TBL_TASKS, $details);
+                $db->where("t.userId", null, "IS NOT");
             }
+            $db->orWhere("(t.createdBy = ? AND t.status = ?)", [$current_user["userID"], "2"]);
+            $db->groupBy("i.ctn_id");
+            $tasks = $db->get(TBL_TASKS . " t", null, "t.*, u.display_name as name, count(i.inv_id) as quantity");
 
-            echo json_encode(["type" => "success", "message" => "task Added Successfully"]);
+            echo json_encode(["type" => "success", "data" => $tasks, "flag" => $flag, "user" => $current_user["user_role"]]);
             break;
 
-        case 'getCoolingEndData':
-            $db->join(TBL_USERS . " u", "u.userID = t.createdBy");
+        case 'getApprovals':
+            // error_reporting(E_ALL);
+            // ini_set('display_errors', '1');
+            // echo '<pre>';
+            $db->join(TBL_USERS . " u", "u.userID = t.createdBy", "LEFT");
             $db->join(TBL_INVENTORY . " i", "i.ctn_id = t.ctnId", "LEFT");
+            $db->where("t.createdDate", date("Y-m-d H:i:s"), "<=");
+            $flag = true;
+            if ($current_user["user_role"] != "super_admin") {
+                $db->where("t.userRoles LIKE ?", $current_user["user_role"]);
+                $flag = false;
+            }
             $db->where("t.userId", null, "IS");
-            $db->where("t.rejectReason", null, "IS");
-            $tasks = $db->get(TBL_TASKS . " t", null, "t.*, u.display_name as name, i.expectedLocation");
+            $db->groupBy("i.ctn_id");
+            $tasks = $db->get(TBL_TASKS . " t", null, "t.*, u.display_name, count(i.inv_id) as quantity, i.expectedLocation");
 
-            echo json_encode(["type" => "success", "data" => $tasks]);
+            echo json_encode(["type" => "success", "data" => $tasks, "flag" => $flag, "user" => $current_user["user_role"]]);
+            break;
+
+        case 'addSystemTask':
+            // error_reporting(E_ALL);
+            // ini_set('display_errors', '1');
+            // echo '<pre>';
+
+            $details = array(array(
+                "title" => "Products have some issue! Check and solve the issue.",
+                "ctnId" => "2",
+                "createdBy" => "0",
+                "category" => "qc_failed",
+                "userRoles" => 'repairs',
+                "status" => "0"
+            ), array(
+                "title" => "Products requesting some components.",
+                "ctnId" => "3",
+                "createdBy" => "0",
+                "category" => "components_requested",
+                "userRoles" => "admin",
+                "status" => "0"
+            ));
+            $db->where("expectedLocation", "SFQCRJ_00001");
+            $count = $db->getValue(TBL_INVENTORY, "count(inv_id)");
+            if ($count > 0) {
+                $details[] = array(
+                    "title" => "Product's soft qc rejected.",
+                    "ctnId" => "7",
+                    "createdBy" => "0",
+                    "category" => "qc_rejected",
+                    "userRoles" => 'qc',
+                    "status" => "0"
+                );
+            }
+
+            $db->insertMulti(TBL_TASKS, $details);
+            echo json_encode(["type" => "success"]);
             break;
 
         case 'getNotification':
-            $db->where("(userRoles LIKE ? OR userRoles LIKE ?)", ["%" . $current_user["userID"] . ",%", "%" . $current_user["userID"] . "]%"]);
+            // error_reporting(E_ALL);
+            // ini_set('display_errors', '1');
+            // echo '<pre>';
+            $db->where("(userRoles LIKE ? OR userRoles LIKE ? OR userRoles LIKE ? OR userRoles LIKE ?)", ["%[" . $current_user["userID"] . ",%", "%," . $current_user["userID"] . ",%", "%," . $current_user["userID"] . "]%", "[" . $current_user["userID"] . "]"]);
             $db->where("status", "0");
             $db->where("userId", null, "IS");
             $tasks = $db->get(TBL_TASKS, null, "*");
 
-            echo json_encode(["type" => "success", "data" => $tasks]);
+            if (count($tasks) != 0)
+                echo json_encode(["type" => "success", "data" => $tasks]);
+            else
+                echo json_encode(["type" => "error"]);
             break;
 
         case 'taskAction':
@@ -190,7 +112,7 @@ if (isset($_REQUEST['action'])) {
                 $isBreached = "1";
             if ($taskAction == "decline") {
                 $details = array(
-                    "rejectReason" => "The task is rejected by " . $current_user["userID"] . " \nReason : " . $_REQUEST["reason"],
+                    "rejectReason" => "The task is rejected by " . $current_user["display_name"] . " \nReason : " . $_REQUEST["reason"],
                     "status" => "2",
                     "isBreached" => $isBreached
                 );
@@ -230,7 +152,7 @@ if (isset($_REQUEST['action'])) {
             if ($taskDetails["category"] == "printing") {
                 $db->where("ctn_id", $taskDetails["ctnId"]);
                 $capacity = $db->getValue(TBL_INVENTORY, "count(inv_id)");
-                $expectedLocation = $stockist->get_expected_location_status("qc_pending", $capacity);
+                $expectedLocation = $stockist->get_expected_location_by_status("qc_pending", $capacity);
 
                 // getting new user id for next task assignment
                 $db->where("user_role", "qc");

@@ -104,7 +104,7 @@ class Stockist
 	{
 		global $db, $log, $current_user;
 		$capacity = count($lineItems);
-		$expectedLocation = $this->get_expected_location_status("inbound", $capacity);
+		$expectedLocation = $this->get_expected_location_by_status("inbound", $capacity);
 		$return = [];
 		foreach ($lineItems as $lineItem) {
 			$item_price = $this->calculate_item_price($lineItem['price'], $lot_details);
@@ -228,7 +228,7 @@ class Stockist
 			$db->join(TBL_PRODUCTS_MASTER . " pm", 'pm.pid = i.item_id');
 			$db->where("i.inv_id", $inv_id);
 			$sku = $db->getValue(TBL_INVENTORY . " i", "pm.sku");
-			$location = $this->get_expected_location_status('qc_failed', 0, $sku);
+			$location = $this->get_expected_location_by_status('qc_failed', 0, $sku);
 			$details["box_id"] = null;
 			$details["ctn_id"] = "2";
 		}
@@ -273,7 +273,7 @@ class Stockist
 		return number_format($db->getValue(TBL_INVENTORY, "AVG(item_price)"), 0, '.', '');
 	}
 
-	public function get_expected_location_status($status, $capacity = 0, $sku = null)
+	public function get_expected_location_by_status($status, $capacity = 0, $sku = null)
 	{
 		global $db;
 		$locationTitle = "";
@@ -291,13 +291,13 @@ class Stockist
 				$locationId = $db->getValue(TBL_INVENTORY_LOCATIONS, "locationId");
 				break;
 			case 'qc_pending':
-				$locationTitle = "Qc Room";
-				$db->where("locationTitle", $locationTitle, "LIKE");
+				$locationTitle = "QCAREA%";
+				$db->where("locationId", $locationTitle, "LIKE");
 				$locationId = $db->getValue(TBL_INVENTORY_LOCATIONS, "locationId");
 				break;
 			case 'qc_cooling':
-				$locationTitle = "Qc Room";
-				$db->where("locationTitle", $locationTitle, "LIKE");
+				$locationTitle = "QCAREA%";
+				$db->where("locationId", $locationTitle, "LIKE");
 				$locationId = $db->getValue(TBL_INVENTORY_LOCATIONS, "locationId");
 				break;
 			case 'qc_verified':
@@ -308,6 +308,11 @@ class Stockist
 				$db->where("la.sku", $sku);
 				$db->where("l.locationId", $locationId, "LIKE");
 				$db->where("l.availability", "0", ">");
+				$locationId = $db->getValue(TBL_INVENTORY_LOCATIONS . " l", "locationId");
+				break;
+			case 'qc_reject':
+				$locationId = "SFQCRJ%";
+				$db->where("locationId", $locationId, "LIKE");
 				$locationId = $db->getValue(TBL_INVENTORY_LOCATIONS, "locationId");
 				break;
 			case 'components_requested':

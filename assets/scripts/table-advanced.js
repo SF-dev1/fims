@@ -57,6 +57,7 @@ var TableAdvanced = function () {
 		tableWrapper.find('.dataTables_length select').select2(); // initialize select2 dropdown
 	}
 
+
 	var initTable2 = function () {
 		var table = $('#sample_2');
 
@@ -334,11 +335,11 @@ var TableAdvanced = function () {
 			}
 
 			initTable1();
-			initTable2();
-			initTable3();
-			initTable4();
-			initTable5();
-			initTable6();
+			// initTable2();
+			// initTable3();
+			// initTable4();
+			// initTable5();
+			// initTable6();
 		}
 
 	};

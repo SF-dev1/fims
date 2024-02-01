@@ -40,6 +40,7 @@ $definer = array(
 	'MWS_DEV_ID' => '968266485260',
 	'MWS_ACCESS_KEY' => 'AKIAI5LLEHRWM6KE72OA',
 	'MWS_ACCESS_SECRET' => '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',
+	'ENV' => "LOCAL"
 );
 
 if ($_SERVER['SERVER_NAME'] == "fims-live.com") { // LINUX DEV
@@ -57,15 +58,13 @@ if ($_SERVER['SERVER_NAME'] == "www.skmienterprise.com" || $_SERVER['SERVER_NAME
 	$definer['TODAYS_PICKLIST_PATH'] = '/var/www/skmienterprise/fims/labels/picklists/' . date("Y", time()) . '/' . date("M", time()) . '/' . date("d", time()) . $test;
 	$definer['TODAYS_STOCKIST_PATH'] = '/var/www/skmienterprise/fims/log/' . date("Y", time()) . '/' . date("M", time()) . '/' . date("d", time()) . '/stockist' . $test;
 	$definer['UPLOAD_PATH'] = '/var/www/skmienterprise/fims/uploads';
-}
-
-if ($_SERVER['SERVER_NAME'] == "www.skmienterprise.com" || $_SERVER['SERVER_NAME'] == "skmienterprise.com" || strpos($_SERVER['PHP_SELF'], 'fims-sand')) { // PRODUCTION
+	$definer['ENV'] = 'PRODUCTION';
 	$definer['BASE_URL'] = 'https://www.skmienterprise.com/fims';
 	$definer['DB_HOST'] = 'fims.cy9ut4zgz1ip.us-east-1.rds.amazonaws.com';
 	$definer['DB_USER'] = 'root';
 }
 
-if ($_SERVER['SERVER_NAME'] == "fims-live.com") { // PRODUCTION
+if ($_SERVER['SERVER_NAME'] == "fims-live.com") { // LOCAL
 	$definer['BASE_URL'] = 'http://fims-live.com';
 
 	$definer['DB_HOST'] = 'localhost';
@@ -81,9 +80,10 @@ if ($_SERVER['SERVER_NAME'] == "fims-live.com") { // PRODUCTION
 }
 
 
-if (strpos($_SERVER['PHP_SELF'], 'fims-sand')) // STAGING
+if (strpos($_SERVER['PHP_SELF'], 'fims-sand')) { // STAGING
 	$definer['BASE_URL'] = 'https://www.skmienterprise.com/fims-sand/fims';
-
+	$definer['ENV'] = 'STAGING';
+}
 foreach ($definer as $key => $value) {
 	if (!defined($key))
 		define($key, $value);

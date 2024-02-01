@@ -164,7 +164,7 @@ if (isset($_REQUEST['action'])) {
 
 			$inv_ids = json_decode($inv_ids, true);
 			$capacity = count($inv_ids);
-			$expectedLocation = $stockist->get_expected_location_status("printing", $capacity);
+			$expectedLocation = $stockist->get_expected_location_by_status("printing", $capacity);
 			$details = array(
 				"box_id" => $box_id,
 				"ctn_id" => $ctn_id,
@@ -830,7 +830,7 @@ if (isset($_REQUEST['action'])) {
 			$db->join(TBL_PRODUCTS_CATEGORY . ' pc', 'p.category=pc.catid');
 			$db->where('i.inv_id', $uid);
 			$db->where('(inv_status = ? OR inv_status = ? OR inv_status = ?)', array('qc_pending', 'qc_cooling', 'qc_verified'));
-			$return = $db->getOne(TBL_INVENTORY . ' i', 'i.inv_id as uid, i.inv_status, p.sku, p.thumb_image_url, pc.categoryName as category, pc.catid as issue_category');
+			$return = $db->getOne(TBL_INVENTORY . ' i', 'i.inv_id as uid, i.ctn_id, i.inv_status, p.sku, p.thumb_image_url, pc.categoryName as category, pc.catid as issue_category');
 			if ($return) {
 				if ($return['inv_status'] == "qc_cooling" || $return['inv_status'] == "qc_verified") {
 					$cooling_time_start = $stockist->get_qc_inprogress_time($uid);
@@ -860,70 +860,172 @@ if (isset($_REQUEST['action'])) {
 			break;
 
 		case 'update_uid':
+			// error_reporting(E_ALL);
+			// ini_set('display_errors', '1');
+			// echo '<pre>';
 			$inv_id = $_POST['inv_id'];
 			$category = $_POST['category'];
 			$current_status = $_POST['current_status'];
 			$issues = json_decode(str_replace('null,', '', $_POST['identified_issues']));
+			$flag = false;
 
-			if (!empty($issues)) {
-				$inv_status = 'qc_failed';
-				$issue_ids = array();
-				foreach ($issues as $issue) {
-					$issue_ids[$issue->issue_id] = false;
-				}
-				$issue_ids = json_encode($issue_ids);
-				$details = array(
-					'inv_status' => 'qc_failed',
-				);
-				$log_details = $issue_ids;
-			} else {
-				if ($current_status == "qc_cooling") {
-					$inv_status = 'qc_verified';
-					$log_details = 'QC Verified';
-				} else if ($category != "Watches") {
-					$inv_status = 'qc_verified';
-					$log_details = 'QC Verified';
-					$cooling_period = "";
-				} else {
-					$inv_status = 'qc_cooling';
-					$cooling_period = "";
-					if ($category == "Watches") {
-						$expectedLocation = $stockist->get_expected_location_by_status("qc_cooling");
-						$details = array(
-							"expectedLocation" => $expectedLocation,
-							"currentLocation" => null,
-						);
-						$db->where("inv_id", $inv_id);
-						$db->update(TBL_INVENTORY, $details);
+			$db->where("category", $_POST["current_status"]);
+			$expCtnData = $db->getOne(TBL_INVENTORY_STATE, "ctnId, count, id");
 
-						$cooling_period = '. Cooling Period enabled.::Cooling Period End: ' . date("d M, Y H:i:s", strtotime("+72 hours"));
+			$db->where("inv_id", $inv_id);
+			$ctnId = $db->getValue(TBL_INVENTORY, "ctn_id");
+			if ($expCtnData["ctnId"]) {
+				if ($expCtnData["count"] != 0) {
+					if ($ctnId && $ctnId == $expCtnData["ctnId"]) {
+						// Any Cartoon Is inProgress for the same status
+						// Cartoon Is not Finished yet
+						$db->where("ctnId", $expCtnData["ctnId"]);
+						$db->update(TBL_INVENTORY_STATE, ["count" => ($expCtnData["count"] - 1)]);
+						$flag = true;
+					} else {
+						// Any Cartoon Is inProgress for the same status and selected uid is not in cartoon
+						$flag = false;
 					}
-					$log_details = 'QC In Progress' . $cooling_period;
-				}
-			}
-
-			$status = $stockist->get_inventory_status($inv_id);
-			if ($inv_status == 'qc_verified' && $status == "qc_verified") {
-				$return = array('type' => 'info', 'msg' => 'QC Status is already verified');
-			} else {
-				if ($stockist->update_inventory_status($inv_id, $inv_status)) {
-					if ($stockist->add_inventory_log($inv_id, $inv_status, $log_details))
-						$return = array('type' => 'success', 'msg' => 'Successfully updated QC Status');
-					else
-						$return = array('type' => 'error', 'msg' => 'Unable to updated Inventory log.');
 				} else {
-					$return = array('type' => 'error', 'msg' => 'Unable to updated QC Status');
+					// Cartoon Is completed
+					$db->where("id", $expCtnData["id"]);
+					$details = array(
+						"category" => $current_status,
+						"ctnId" => $ctnId,
+						"count" => $count
+					);
+					$db->update(TBL_INVENTORY_STATE, $details);
+					$flag = true;
 				}
+			} else {
+				$db->where("ctn_id", $ctnId);
+				$count = $db->getValue(TBL_INVENTORY, "count(inv_id)");
+				$details = array(
+					"category" => $current_status,
+					"ctnId" => $ctnId,
+					"count" => $count
+				);
+				$db->insert(TBL_INVENTORY_STATE, $details);
+
+				switch ($current_status) {
+					case 'qc_pending':
+						// Add task with the startdate (current_time + 72 hours)
+						$details = array(
+							"title" => "Cartoon is ready to QC Verification!",
+							"ctnId" => $ctnId,
+							"category" => "qc_cooling",
+							"userRoles" => "qc",
+							"status" => "0",
+							"createdBy" => $current_user["userID"],
+							"createdDate" => date("Y-m-d H:i:s", strtotime("now + 72 hours"))
+						);
+						$db->insert(TBL_TASKS, $details);
+						break;
+					case 'qc_cooling':
+						// Add task to move inventory to stock room
+						$details = array(
+							"title" => "Cartoon is ready for sales! Move cartoon to Stock Room",
+							"ctnId" => $ctnId,
+							"category" => "qc_verified",
+							"userRoles" => "warehouse_operations",
+							"status" => "0",
+							"createdBy" => $current_user["userID"]
+						);
+						$db->insert(TBL_TASKS, $details);
+						break;
+				}
+				$flag = true;
 			}
 
-			$data  = array(
-				"logType" => "Product QC End",
-				"identifier" => $inv_id,
-				"userId" => $current_user['userID']
-			);
-			$log_status = $db->insert(TBL_PROCESS_LOG, $data);
+			if ($flag) {
+				if (!empty($issues)) {
+					$inv_status = 'qc_failed';
+					$issue_ids = array();
+					foreach ($issues as $issue) {
+						$issue_ids[$issue->issue_id] = false;
+					}
+					$issue_ids = json_encode($issue_ids);
+					$details = array(
+						'inv_status' => 'qc_failed',
+					);
+					$log_details = $issue_ids;
+				} else {
+					if ($current_status == "qc_cooling") {
+						$inv_status = 'qc_verified';
+						$log_details = 'QC Verified';
+					} else if ($category != "Watches") {
+						$inv_status = 'qc_verified';
+						$log_details = 'QC Verified';
+						$cooling_period = "";
+					} else {
+						$inv_status = 'qc_cooling';
+						$cooling_period = "";
+						if ($category == "Watches") {
+							$expectedLocation = $stockist->get_expected_location_by_status("qc_cooling");
+							$details = array(
+								"expectedLocation" => $expectedLocation,
+								"currentLocation" => null,
+							);
+							$db->where("inv_id", $inv_id);
+							$db->update(TBL_INVENTORY, $details);
 
-			echo json_encode($return);
+							$cooling_period = '. Cooling Period enabled.::Cooling Period End: ' . date("d M, Y H:i:s", strtotime("+72 hours"));
+						}
+						$log_details = 'QC In Progress' . $cooling_period;
+					}
+				}
+
+				$status = $stockist->get_inventory_status($inv_id);
+				if ($inv_status == 'qc_verified' && $status == "qc_verified") {
+					$return = array('type' => 'info', 'msg' => 'QC Status is already verified');
+				} else {
+					if ($stockist->update_inventory_status($inv_id, $inv_status)) {
+						if ($stockist->add_inventory_log($inv_id, $inv_status, $log_details))
+							$return = array('type' => 'success', 'msg' => 'Successfully updated QC Status');
+						else
+							$return = array('type' => 'error', 'msg' => 'Unable to updated Inventory log.');
+					} else {
+						$return = array('type' => 'error', 'msg' => 'Unable to updated QC Status');
+					}
+				}
+
+				$data  = array(
+					"logType" => "Product QC End",
+					"identifier" => $inv_id,
+					"userId" => $current_user['userID']
+				);
+				$log_status = $db->insert(TBL_PROCESS_LOG, $data);
+
+				echo json_encode($return);
+			} else {
+				$return = array(
+					"type" => "error",
+					"msg" => "Can't process item outside of cartoon before completing the cartoon!"
+				);
+				echo json_encode($return);
+			}
+
+			break;
+
+		case 'qc_reject':
+			// error_reporting(E_ALL);
+			// ini_set('display_errors', '1');
+			// echo '<pre>';
+
+			$uid = $_REQUEST["uid"];
+			$location = $stockist->get_expected_location_by_status("qc_reject");
+			$inv_status = "qc_pending";
+			$log_details = "Soft QC Rejected!";
+			$details = array(
+				"ctn_id" => "7",
+				"box_id" => null,
+				"inv_status" => $inv_status,
+				"expectedLocation" => $location
+			);
+			$stockist->add_inventory_log($uid, $inv_status, $log_details);
+			$db->where("inv_id", $uid);
+			$db->update(TBL_INVENTORY, $details);
+			echo json_encode(["type" => "success"]);
 			break;
 
 		case 'update_print_option':
@@ -1081,6 +1183,11 @@ if (isset($_REQUEST['action'])) {
 					'icon' => 'fa-tags',
 					'color' => 'primary'
 				),
+				'qc_pending' => array(
+					'name' => 'Soft QC Rejected',
+					'icon' => 'fa-times-circle',
+					'color' => 'danger'
+				),
 				'qc_failed' => array(
 					'name' => 'QC Failed',
 					'icon' => 'fa-times-circle',
@@ -1233,7 +1340,7 @@ if (isset($_REQUEST['action'])) {
 
 				$html .= '
 					<div class="timeline-items">
-						<div class="timeline-label">' . date('d M, Y H:i:s', strtotime($line["log_date"])) . '</div>
+						<div class="timeline-label">' . date('d M, Y<\b\r>h:i:s a', strtotime($line["log_date"])) . '</div>
 						<div class="timeline-badge">
 							<i class="fa ' . $icon . ' text-' . $color . '"></i>
 						</div>
@@ -1946,6 +2053,31 @@ if (isset($_REQUEST['action'])) {
 
 			echo json_encode(["type" => "success", "message" => "Location successfully added.\nLocation ID: " . $locationId]);
 			break;
+
+		case 'addTask':
+			// error_reporting(E_ALL);
+			// ini_set('display_errors', '1');
+			// echo '<pre>';
+			$type = $_REQUEST["type"];
+			$ctnId = (int) $_REQUEST["ctnId"];
+
+			switch ($type) {
+				case "printing":
+					$db->where("ctn_id", $ctnId);
+					$db->update(TBL_INVENTORY, ["expectedLocation" => "PRAREA_00001"]);
+					$details = array(
+						"title" => "Cartoon Is Ready For Printing!",
+						"ctnId" => $ctnId,
+						"createdBy" => $current_user["userID"],
+						"category" => "printing",
+						"userRoles" => "printing",
+						"status" => "0",
+					);
+					$db->insert(TBL_TASK, $details);
+
+					echo json_encode(["type" => "success", "msg" => "Move the cartoon to location : PRAREA_00001"]);
+					break;
+			}
 	}
 } else {
 	exit('hmmmm... trying to hack in ahh!');

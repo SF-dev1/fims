@@ -236,6 +236,17 @@ var Inventory = function () {
 					}
 
 					if (ctn_qty_count == current_state.ctn_qty) {
+						// assign task to printing
+						var formData = new FormData();
+						formData.append("action", "addTask");
+						formData.append("type", "printing");
+						formData.append("ctnId", current_state.ctn_id);
+
+						window.setTimeout(function () {
+							var response = submitForm(formData, "POST");
+							UIToastr.init(response.type, 'Task Allocation', response.msg);
+						});
+
 						$('.add_box').prop('disabled', true);
 						$('.add_ctn').prop('disabled', false);
 						current_state.ctn_id = "";
@@ -617,6 +628,7 @@ var Inventory = function () {
 			window.setTimeout(function () {
 				var s = submitForm("action=get_uid_details&uid=" + uid, 'GET');
 				if (s.type == "success") {
+					$('.ctn_id').addClass("input-group-addon").text("CTN" + String(s.ctn_id).padStart(9, '0'));
 					$('.product_sku').text(s.sku);
 					$('.product_image').attr('src', image_url + '/uploads/products/' + s.thumb_image_url);
 					$('.product_details').removeClass('hide');
@@ -3420,6 +3432,37 @@ var Inventory = function () {
 		});
 	}
 
+	function qcReject_handleItem() {
+		// function disableF5(e) {
+		// 	if ((e.which || e.keyCode) == 116 || (e.which || e.keyCode) == 82) {
+		// 		console.log(e);
+		// 		e.preventDefault();
+		// 		if (confirm("Are You Sure?")) {
+		// 			window.location.reload();
+		// 		}
+		// 	}
+		// };
+
+		$("#get-uid").submit(function (event) {
+			event.preventDefault();
+			// disableF5();
+			var uid = $("#uid").val();
+
+			var formData = new FormData();
+			formData.append("action", "qc_reject");
+			formData.append("uid", uid);
+
+			window.setTimeout(function () {
+				var response = submitForm(formData, "POST");
+				if (response.type == "success") {
+					UIToastr.init('success', 'QC Rejected.', 'Status for the UID: ' + uid + ' updated as qc_rejected');
+				} else {
+					UIToastr.init('error', 'Error processing your request', 'Opps! Something went wrong!!!');
+				}
+			}, 10);
+		});
+	}
+
 	return {
 		init: function (type) {
 			switch (type) {
@@ -3434,6 +3477,10 @@ var Inventory = function () {
 
 				case "quality_check":
 					qc_handleItem();
+					break;
+
+				case "quality_reject":
+					qcReject_handleItem();
 					break;
 
 				case "qc_issues":
