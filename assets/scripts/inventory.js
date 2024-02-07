@@ -615,10 +615,21 @@ var Inventory = function () {
 		return s.count;
 	}
 
+	function disableF5(e) {
+		if ((e.which || e.keyCode) == 116 || (e.which || e.keyCode) == 82) {
+			console.log(e);
+			e.preventDefault();
+			if (confirm("Are You sure?")) {
+				endProcess(uid, "QC");
+				window.location.reload();
+			}
+		}
+	};
 	// QC
 	function qc_handleItem() {
 		var uid = "";
 		// var s = {"type":"success","sku":"SKMEI-1251-BLUE","thumb_image_url":"product-832.jpg","category":"Watches","issue_category":"1"};
+
 		// var s = "";
 		$('form#get-uid').submit(function (e) {
 			e.preventDefault();
@@ -628,6 +639,11 @@ var Inventory = function () {
 			window.setTimeout(function () {
 				var s = submitForm("action=get_uid_details&uid=" + uid, 'GET');
 				if (s.type == "success") {
+					$(document).on("keydown", disableF5);
+					$('#sidelineProduct').click(function () {
+						endProcess(uid, "QC");
+						$('#uid').val("");
+					});
 					$('.ctn_id').addClass("input-group-addon").text("CTN" + String(s.ctn_id).padStart(9, '0'));
 					$('.product_sku').text(s.sku);
 					$('.product_image').attr('src', image_url + '/uploads/products/' + s.thumb_image_url);
@@ -645,20 +661,6 @@ var Inventory = function () {
 					qcHotkey_handleRegistration('-,=,num_add,num_subtract', 'pass_fail', s); // PASS FAIL
 					$('.btn-success').focus();
 
-					function disableF5(e) {
-						if ((e.which || e.keyCode) == 116 || (e.which || e.keyCode) == 82) {
-							console.log(e);
-							e.preventDefault();
-							if (confirm("Are You sure?")) {
-								endProcess(uid, "QC");
-								window.location.reload();
-							}
-						}
-					};
-
-					$(document).ready(function () {
-						$(document).on("keydown", disableF5);
-					});
 				} else {
 					UIToastr.init(s.type, 'QC Check', s.msg);
 				}
@@ -666,9 +668,6 @@ var Inventory = function () {
 			}, 10);
 		});
 
-		$('#sidelineProduct').click(function () {
-			endProcess(uid, "QC");
-		});
 
 		$('form.product_details').submit(function (e) {
 			e.preventDefault();
@@ -772,7 +771,7 @@ var Inventory = function () {
 			}
 		});
 		hotkeys.setScope(k_scope);
-		$('.btn, .icon-btn').off().on('click', function (e) {
+		$('.btn:not(#sidelineProduct), .icon-btn').off().on('click', function (e) {
 			e.preventDefault();
 		})
 	}
@@ -3463,6 +3462,29 @@ var Inventory = function () {
 		});
 	}
 
+	function manage_handleLocation() {
+		$("#update-location").submit(function (event) {
+			$("#uid_move_submit").prop("disabled", true);
+			$("#uid_move").prop("disabled", true);
+			event.preventDefault();
+
+			let uid = $("#uid_move").val();
+			var formData = new FormData();
+			formData.append("action", "MoveToCtn");
+			formData.append("uid", uid);
+
+			window.setTimeout(function () {
+				var response = submitForm(formData, "POST");
+				if (response.type == "success") {
+					UIToastr.init(response.notificationType, "Inv Moved", "Inventory Successfully moved");
+					$("#uid_move_submit").prop("disabled", false);
+					$("#uid_move").prop("disabled", false);
+					$("#uid_move").val("");
+				}
+			}, 10);
+		});
+	}
+
 	return {
 		init: function (type) {
 			switch (type) {
@@ -3497,10 +3519,10 @@ var Inventory = function () {
 					break;
 
 				case "manage":
-					Qz.init();
-					$(window).bind('beforeunload', function () {
-						Qz.disconnect();
-					});
+					// Qz.init();
+					// $(window).bind('beforeunload', function () {
+					// 	Qz.disconnect();
+					// });
 					manage_handleSelect();
 					manage_handleValidation();
 					manage_handleRePrint();
@@ -3510,6 +3532,8 @@ var Inventory = function () {
 
 					alter_handleSelect();
 					alter_handleValidation();
+
+					manage_handleLocation();
 					break;
 
 				case "stock":

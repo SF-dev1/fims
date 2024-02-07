@@ -5,8 +5,6 @@
 if (isset($_REQUEST['action']) && trim($_REQUEST['action']) != "") {
 	include(dirname(dirname(__FILE__)) . '/config.php');
 	global $db;
-	// unset($_REQUEST['token']);
-	// unset($_REQUEST['bas_sec_session_id']);
 
 	switch ($_REQUEST['action']) {
 		case 'purchase_orders':
@@ -53,22 +51,20 @@ if (isset($_REQUEST['action']) && trim($_REQUEST['action']) != "") {
 			$party = $db->getOne(TBL_PURCHASE_ORDER . ' po', 'p.party_id, p.party_name');
 
 			$db->where('po_id', $po_id);
-			// $db->join(TBL_PRODUCTS_MASTER.' pm', '(CONCAT("pid-", pm.pid))=poi.item_id');
 			$pos['items'] = $db->get(TBL_PURCHASE_ORDER_ITEMS . ' poi', null, 'poi.po_id, poi.item_id, poi.item_price, poi.item_qty, poi.item_qty as item_shipped_qty, poi.item_currency');
 			$return = array_merge(array('po_id' => $po_id), $party, $pos);
 			echo json_encode($return);
 			break;
 
 		case 'save_po':
-			$po_total_amount = 0;
+			// error_reporting(E_ALL);
+			// ini_set('display_errors', '1');
+			// echo '<pre>';
 			$lineitems = $_POST['lineitems'];
-			foreach ($lineitems as $lineitem) {
-				$po_total_amount += (float)$lineitem['price'] * (int)$lineitem['qty'];
-			}
+
 			$status = ($_POST['type'] == "create") ? 'created' : 'draft';
 			$details = array(
 				'po_party_id' => $_POST['party_id'],
-				'po_total_amount' => $po_total_amount,
 				'po_status' => $status,
 			);
 
@@ -91,9 +87,7 @@ if (isset($_REQUEST['action']) && trim($_REQUEST['action']) != "") {
 						$items[] = array(
 							'po_id' => $po_id,
 							'item_id' => $lineitem['sku'],
-							'item_price' => $lineitem['price'],
 							'item_qty' => $lineitem['qty'],
-							'item_currency' => $lineitem['currency'],
 							'item_status' => $poi_status
 						);
 					}
@@ -124,9 +118,7 @@ if (isset($_REQUEST['action']) && trim($_REQUEST['action']) != "") {
 						$items[] = array(
 							'po_id' => $po_id,
 							'item_id' => $lineitem['sku'],
-							'item_price' => $lineitem['price'],
 							'item_qty' => $lineitem['qty'],
-							'item_currency' => $lineitem['currency'],
 							'item_status' => $poi_status
 						);
 					}

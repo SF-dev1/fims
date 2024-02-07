@@ -345,6 +345,28 @@ function menu_items()
 						),
 					),
 				),
+				"location_audit" => array(
+					"title" => "Location Audit",
+					"href" => BASE_URL . "/inventory/location_audit.php",
+					"header" => array(
+						"css" => array(
+							"bootstrap-fileinput/bootstrap-fileinput.css",
+							"select2/select2.css",
+						),
+					),
+					"footer" => array(
+						"plugins" => array(
+							"jquery-validation/js/jquery.validate.min.js?v=" . $js_version,
+							"select2/select2.min.js?v=" . $js_version,
+						),
+						"scripts" => array(
+							"inventory_audit.js?v=" . $js_version,
+						),
+						"init" => array(
+							'InventoryAudit.init("locationAudit");',
+						),
+					),
+				),
 				"location_allocation" => array(
 					"title" => "Location Allocation",
 					"href" => BASE_URL . "/inventory/location.php",

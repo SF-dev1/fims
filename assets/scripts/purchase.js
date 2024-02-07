@@ -402,21 +402,7 @@ var Purchase = function () {
 
 	function purchaseOrder_lineItemClick(itemNumber) {
 		$('.btn_add_' + itemNumber).on('click', function (e) {
-			// $('#price_'+itemNumber).parent().removeClass('has-error');
-			// $('#qty_'+itemNumber).parent().removeClass('has-error');
-			// if($('#price_'+itemNumber).val() == "" && $('#qty_'+itemNumber).val() == ""){
-			// 	$('#price_'+itemNumber).parent().addClass('has-error');
-			// 	$('#qty_'+itemNumber).parent().addClass('has-error');
-			// 	return;
-			// }
-			// if($('#price_'+itemNumber).val() == ""){
-			// 	$('#price_'+itemNumber).parent().addClass('has-error');
-			// 	return;
-			// }
-			// if($('#qty_'+itemNumber).val() == ""){
-			// 	$('#qty_'+itemNumber).parent().addClass('has-error');
-			// 	return;
-			// }
+
 			e.preventDefault();
 			if ($('#add-purchase-order').validate().form()) {
 				$(this).attr('disabled', true);
@@ -453,20 +439,11 @@ var Purchase = function () {
 
 	function purchaseOrder_lineItem(itemNumber) {
 		$content = '<div class="form-group lineitems lineitem_' + itemNumber + '">' +
-			'<div class="col-md-4">' +
+			'<div class="col-md-8">' +
 			'<select class="products_list_' + itemNumber + ' form-control" name="lineitems[' + itemNumber + '][sku]" id="sku_' + itemNumber + '" tabindex="' + (tabOrder++) + '" required></select>' +
 			'</div>' +
-			'<div class="col-md-1">' +
-			'<select class="form-control currency" name="lineitems[' + itemNumber + '][currency]" id="currency_' + itemNumber + '" tabindex="' + (tabOrder++) + '" required><option value="INR">INR</option><option value="CNY">CNY</option></select>' +
-			'</div>' +
-			'<div class="col-md-2">' +
-			'<input class="form-control price" name="lineitems[' + itemNumber + '][price]" placeholder="Price" id="price_' + itemNumber + '" tabindex="' + (tabOrder++) + '" type="text" required>' +
-			'</div>' +
-			'<div class="col-md-2">' +
+			'<div class="col-md-3">' +
 			'<input class="form-control qty" name="lineitems[' + itemNumber + '][qty]" placeholder="Quantity" id="qty_' + itemNumber + '" tabindex="' + (tabOrder++) + '" type="text" required>' +
-			'</div>' +
-			'<div class="col-md-2">' +
-			'<input class="form-control amount" placeholder="Amount" readonly="true" type="text">' +
 			'</div>' +
 			'<div class="col-md-1">' +
 			'<div class="spinner-buttons input-group-btn">' +
@@ -515,20 +492,11 @@ var Purchase = function () {
 	}
 
 	function purchaseOrder_lineItemCalculation() {
-		$('.price, .qty, .add_lineItem, .remove_lineItem').on('focusout change changeInput input', function () {
+		$('.qty, .add_lineItem, .remove_lineItem').on('focusout change changeInput input', function () {
 			lineitem = $(this).parent().parent().attr('class').split(' ').pop();
 			if (lineitem == 'col-md-1')
 				lineitem = $(this).parent().parent().parent().attr('class').split(' ').pop();
-			price = $('.' + lineitem + ' .price').val();
 			qty = $('.' + lineitem + ' .qty').val();
-
-			$('.' + lineitem + ' .amount').val(price * qty);
-
-			var sum = 0;
-			$('.amount').each(function () {
-				sum += Number($(this).val());
-			});
-			$('.total_amount').val(sum);
 
 			var units = 0;
 			$('.qty').each(function () {
@@ -625,15 +593,12 @@ var Purchase = function () {
 
 	function purchaseOrder_handleFormData($po_id) {
 		var el = ".portlet-body";
-		var formData = new FormData();
 		var s = submitForm('action=get_po&po_id=' + $po_id, "GET");
 
 		$('.suppliers_list').val(s.party_id).trigger('change');
 		for (var i = 0; i < s.items.length; i++) {
 			$('#sku_' + i).val(s.items[i].item_id).trigger('change');
-			$('#price_' + i).val(s.items[i].item_price);
 			$('#qty_' + i).val(s.items[i].item_qty).blur().focus();
-			$('#currency_' + i).val(s.items[i].item_currency).blur().focus();
 			if (i != s.items.length - 1) {
 				$('.btn_add_' + i).trigger('click');
 			}

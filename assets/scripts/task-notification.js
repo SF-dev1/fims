@@ -12,7 +12,7 @@ var TasksNotification = function () {
 			formData = Object.fromEntries(formData);
 			getParams += new URLSearchParams(formData).toString();
 		}
-		$url = BASE_URL + "/tasks/ajax_load.php?token=" + new Date().getTime();
+		$url = base_url + "/tasks/ajax_load.php?token=" + new Date().getTime();
 
 		return $.ajax({
 			type: $type,

@@ -22,7 +22,7 @@ if (isset($_REQUEST['action'])) {
 			}
 			break;
 
-		case "create_box":
+		case 'create_box':
 			$items = json_decode($_POST["items"]);
 			$insert_id = $db->insert(TBL_INVENTORY_BOX, array("quantity" => count($items), "createdDate" => date("Y-m-d H:i:s")));
 			if ($insert_id) {
@@ -39,7 +39,7 @@ if (isset($_REQUEST['action'])) {
 			}
 			break;
 
-		case "create_ctn":
+		case 'create_ctn':
 			$size = $_POST["size"];
 			$ctnId = $db->insert(TBL_INVENTORY_CTN, array("quantity" => $size, "createdDate" => date("Y-m-d H:i:s")));
 			$db->where("userId", $current_user["userID"]);
@@ -69,7 +69,7 @@ if (isset($_REQUEST['action'])) {
 			}
 			break;
 
-		case "get_box":
+		case 'get_box':
 			$db->where("userId", $current_user["userID"]);
 			$box = $db->get(TBL_INVENTORY_STATE, null, "boxId, invId");
 			if ($box) {
@@ -834,7 +834,7 @@ if (isset($_REQUEST['action'])) {
 			if ($return) {
 				if ($return['inv_status'] == "qc_cooling" || $return['inv_status'] == "qc_verified") {
 					$cooling_time_start = $stockist->get_qc_inprogress_time($uid);
-					if (strtotime($cooling_time_start . ' +72 hours') > time()) {
+					if (!is_null($cooling_time_start) && strtotime($cooling_time_start . ' +72 hours') > time()) {
 						echo json_encode(array('type' => 'info', 'msg' => 'Product is in cooling period'));
 					} else {
 						if ($stockist->add_inventory_log($uid, 'qc_started', 'QC Started'))
@@ -1494,7 +1494,7 @@ if (isset($_REQUEST['action'])) {
 				} else {
 					$db->where("box_id", $box);
 				}
-				$data = $db->get(TBL_INVENTORY, null, "box_id, inv_id, inv_audit_tag");
+				$data = $db->get(TBL_INVENTORY, null, "box_id, inv_id, inv_audit_tag, inv_status");
 				$boxContent = '';
 				$current_audit_tag = get_option("current_audit_tag");
 				$ctnCount = 0;
@@ -1505,8 +1505,12 @@ if (isset($_REQUEST['action'])) {
 					while ($box == $data[$i]["box_id"]) {
 						$tags = (isset($data[$i]['inv_audit_tag']) ? json_decode($data[$i]['inv_audit_tag'], true) : array());
 						$badge = 'outline';
-						if (in_array($current_audit_tag, $tags))
+						if (in_array($current_audit_tag, $tags)) {
 							$badge = 'success';
+						}
+						if ($data[$i]["inv_status"] == "qc_cooling") {
+							$badge = 'danger';
+						}
 						$contentTag .= '<span class="badge badge-' . $badge . '">' . $data[$i]["inv_id"] . '</span>';
 						$i++;
 						$count++;
@@ -1860,8 +1864,12 @@ if (isset($_REQUEST['action'])) {
 
 			// AUDIT
 		case 'audit_uid':
+			// error_reporting(E_ALL);
+			// ini_set('display_errors', '1');
+			// echo '<pre>';
 			$inv_id = trim(strtoupper($_REQUEST['uid']));
 			$audit_id = $_REQUEST['audit_id'];
+			$locationId = (isset($_REQUEST['locationId']) ? $_REQUEST['locationId'] : false);
 
 			if (substr($inv_id, 0, 3) === "CTN") {
 				$db->where('ctn_id', (int)substr($inv_id, 3));
@@ -1873,38 +1881,68 @@ if (isset($_REQUEST['action'])) {
 				$uids = array_column($inventories, 'inv_id');
 			} else {
 				$db->where('inv_id', $inv_id);
-				$inventories = $db->get(TBL_INVENTORY, NULL, 'inv_id, inv_status, inv_audit_tag');
+				$inventories = $db->get(TBL_INVENTORY, NULL, 'inv_id, inv_status, inv_audit_tag, location_audit_tag');
 				$uids = array_column($inventories, 'inv_id');
 			}
 
 			$return = array();
 			if ($uids) {
-				$i = 0;
-				foreach ($uids as $uid) {
-					if ($inventories[$i]['inv_status'] == "sales" || $inventories[$i]['inv_status'] == "outbound")
-						$return[ucwords(str_replace('_', ' ', $inventories[$i]['inv_status']))][] = $uid;
-					else {
-						$audit_tags = json_decode($inventories[$i]['inv_audit_tag'], true);
-						if (is_null($audit_tags))
-							$audit_tags = array();
+				if ($locationId) {
+					$i = 0;
+					foreach ($uids as $uid) {
+						if ($inventories[$i]['inv_status'] == "sales" || $inventories[$i]['inv_status'] == "outbound")
+							$return[ucwords(str_replace('_', ' ', $inventories[$i]['inv_status']))][] = $uid;
+						else {
+							$location_audit_tags = json_decode($inventories[$i]['location_audit_tag'], true);
+							if (is_null($location_audit_tags))
+								$location_audit_tags = array();
 
-						if (!in_array($audit_id, $audit_tags)) {
-							$audit_tag = json_encode(array_merge(array($audit_id), $audit_tags));
-							$db->where('inv_id', $uid);
-							if ($db->update(TBL_INVENTORY, array('inv_audit_tag' => $audit_tag))) {
-								if ($stockist->add_inventory_log($uid, 'audit', "Audited :: " . strtoupper($audit_id))) {
-									$return['Success'][] = $uid;
+							if (!in_array($audit_id, $location_audit_tags)) {
+								$audit_tag = json_encode(array_merge(array($audit_id), $location_audit_tags));
+								$db->where('inv_id', $uid);
+								if ($db->update(TBL_INVENTORY, array('location_audit_tag' => $audit_tag))) {
+									if ($stockist->add_inventory_log($uid, 'audit', "Audited :: " . strtoupper($audit_id))) {
+										$return['status'] = "Success";
+									} else {
+										$return['status'] = "Audit Log Unsuccessful";
+									}
 								} else {
-									$return['Audit Log Unsuccessful'][] = $uid;
+									$return['status'] = "Audit Unsuccessful";
 								}
 							} else {
-								$return['Audit Unsuccessful'][] = $uid;
+								$return['status'] = "Already Audited";
 							}
-						} else {
-							$return['Already Audited'][] = $uid;
 						}
+						$i++;
 					}
-					$i++;
+				} else {
+					$i = 0;
+					foreach ($uids as $uid) {
+						if ($inventories[$i]['inv_status'] == "sales" || $inventories[$i]['inv_status'] == "outbound")
+							$return[ucwords(str_replace('_', ' ', $inventories[$i]['inv_status']))][] = $uid;
+						else {
+							$audit_tags = json_decode($inventories[$i]['inv_audit_tag'], true);
+							if (is_null($audit_tags))
+								$audit_tags = array();
+
+							if (!in_array($audit_id, $audit_tags)) {
+								$audit_tag = json_encode(array_merge(array($audit_id), $audit_tags));
+								$db->where('inv_id', $uid);
+								if ($db->update(TBL_INVENTORY, array('inv_audit_tag' => $audit_tag))) {
+									if ($stockist->add_inventory_log($uid, 'audit', "Audited :: " . strtoupper($audit_id))) {
+										$return['Success'][] = $uid;
+									} else {
+										$return['Audit Log Unsuccessful'][] = $uid;
+									}
+								} else {
+									$return['Audit Unsuccessful'][] = $uid;
+								}
+							} else {
+								$return['Already Audited'][] = $uid;
+							}
+						}
+						$i++;
+					}
 				}
 			} else {
 				$return['not_found'][] = $uid;
@@ -2000,12 +2038,63 @@ if (isset($_REQUEST['action'])) {
 			$data = $db->get(TBL_INVENTORY_LOCATIONS . " l", null, "l.locationId, la.sku");
 			echo json_encode(["type" => "success", "data" => $data]);
 			break;
+		case 'MoveToCtn':
+			$uid = $_REQUEST["uid"];
+			$db->where("inv_id", $uid);
+			$status = $db->getValue(TBL_INVENTORY, "inv_status");
+			switch ($status) {
+				case "qc_cooling":
+					$details = array(
+						"ctn_id" => "4004",
+						"box_id" => "8371"
+					);
+					$type = "info";
+					break;
+				case "qc_pending":
+					$details = array(
+						"ctn_id" => "4005",
+						"box_id" => "8372"
+					);
+					$type = "error";
+					break;
+				case "qc_verified":
+					$details = array(
+						"ctn_id" => "4006",
+						"box_id" => "8373"
+					);
+					$type = "success";
+					break;
+				case "qc_failed":
+					$details = array(
+						"ctn_id" => "4007",
+						"box_id" => "8374"
+					);
+					$type = "warning";
+					break;
+			}
+
+			$db->where("inv_id", $uid);
+			$db->update(TBL_INVENTORY, $details);
+			$details = array(
+				"inv_id" => $uid,
+				"log_type" => "moved",
+				"log_details" => "Moved To #CTN00000" . $details["ctn_id"] . " AND #BOX00000" . $details["box_id"],
+				"user_id" => $current_user["userID"]
+			);
+			$db->insert(TBL_INVENTORY_LOG, $details);
+			echo json_encode(["type" => "success", "notificationType" => $type]);
+			break;
+
+		case 'getLocationDetails':
+			$locationId = $_REQUEST["location"];
+			$db->where("currentLocation", $locationId);
+			$uids = $db->get(TBL_INVENTIRY, null, "inv_id");
+			break;
 
 		case 'getSKU':
 			$data = $db->get(TBL_PRODUCTS_MASTER, null, "sku");
 			echo json_encode(["type" => "success", "data" => $data]);
 			break;
-
 
 		case 'add_location':
 			// error_reporting(E_ALL);
@@ -2078,6 +2167,47 @@ if (isset($_REQUEST['action'])) {
 					echo json_encode(["type" => "success", "msg" => "Move the cartoon to location : PRAREA_00001"]);
 					break;
 			}
+
+		case 'getLocationInventory':
+			// error_reporting(E_ALL);
+			// ini_set('display_errors', '1');
+			// echo '<pre>';
+			$location = $_REQUEST["locationId"];
+			$auditId = $_REQUEST["audit_id"];
+			$db->where("currentLocation", $location);
+			$db->orderBy("ctn_id", "asc");
+			$db->orderBy("box_id", "asc");
+			$invData = $db->get(TBL_INVENTORY, null, "inv_id, ctn_id, box_id, inv_status, inv_audit_tag, location_audit_tag");
+			$return = array();
+			if ($invData) {
+				for ($i = 0; $i < count($invData); $i++) {
+					$ctn = $invData[$i]["ctn_id"];
+					if ($ctn) {
+						while ($ctn == $invData[$i]["ctn_id"]) {
+							$box = $invData[$i]["box_id"];
+							$count = 0;
+							if ($box) {
+								while ($box == $invData[$i]["box_id"]) {
+									$return["data"][$ctn][$box][$count]["invId"] = $invData[$i]["inv_id"];
+									$return["data"][$ctn][$box][$count]["status"] = $invData[$i]["inv_status"];
+									$return["data"][$ctn][$box][$count]["auditStatus"] = (in_array($auditId, json_decode((empty($invData[$i]["location_audit_tag"]) ? "[]" : $invData[$i]["location_audit_tag"]), true)));
+									$i++;
+									$count++;
+								}
+							}
+						}
+					}
+					$i--;
+				}
+				$return["type"] = "success";
+			} else {
+				$return = array(
+					"type" => "error",
+					"message" => "No inventory found on this location!"
+				);
+			}
+			echo json_encode($return);
+			break;
 	}
 } else {
 	exit('hmmmm... trying to hack in ahh!');

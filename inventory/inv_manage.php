@@ -97,7 +97,8 @@ include_once(ROOT_PATH . '/header.php');
 									</div>
 									<div class="col-md-2">
 										<div class="form-group">
-											<button type="submit" class="btn btn-success" tabindex="5" disabled><i></i> Update</button>
+											<button type="submit" class="btn btn-success" tabindex="5" disabled><i></i>
+												Update</button>
 										</div>
 									</div>
 								</div>
@@ -105,6 +106,35 @@ include_once(ROOT_PATH . '/header.php');
 						</form>
 					</div>
 				</div>
+
+				<div class="portlet">
+					<div class="portlet-title">Manage Location</div>
+					<div class="portlet-body">
+						<form role="form" action="#" type="post" class="form-horizontal form-row-seperated" name="update-location" id="update-location">
+							<div class="form-body">
+								<div class="row">
+									<div class="col-md-4">
+										<div class="form-group">
+											<div class="input-group">
+												<span class="input-group-addon">
+													<i class="fa fa-barcode"></i>
+												</span>
+												<input type="text" required name="uid_move" class="form-control round-right uid_move" id="uid_move" minlength="12" maxlength="12" placeholder="Scan the product barcode with a scanner" tabindex="1" autocomplete="off" />
+											</div>
+										</div>
+									</div>
+									<div class="col-md-2">
+										<div class="form-group">
+											<button type="submit" class="btn btn-success" tabindex="2" id="uid_move_submit"><i></i>
+												Update</button>
+										</div>
+									</div>
+								</div>
+							</div>
+						</form>
+					</div>
+				</div>
+
 				<div class="portlet">
 					<div class="portlet-title">Reprint UID Label</div>
 					<div class="portlet-body">
@@ -128,7 +158,8 @@ include_once(ROOT_PATH . '/header.php');
 									</div>
 									<div class="col-md-2">
 										<div class="form-group">
-											<button type="submit" class="btn btn-success" tabindex="8"><i></i> Print</button>
+											<button type="submit" class="btn btn-success" tabindex="8"><i></i>
+												Print</button>
 										</div>
 									</div>
 								</div>
@@ -186,7 +217,7 @@ include_once(ROOT_PATH . '/header.php');
 						<form role="form" action="#" type="post" class="form-horizontal form-row-seperated" name="alter-inventory" id="alter-inventory">
 							<div class="form-body">
 								<div class="row">
-									<div class="col-md-12 ">
+									<div class="col-md-12">
 										<div class="form-group">
 											<textarea class="form-control product_ids" rows="5" name="product_ids" tabindex="14" spellcheck="false" placeholder="Product IDs [One Product UID per line]" required></textarea>
 										</div>
