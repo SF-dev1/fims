@@ -5,11 +5,12 @@ var InventoryAudit = function () {
     function submitForm(formData, $type) {
         var getParams = "&";
 
+        var ajaxObj;
         if ($type == "GET") {
             formData = Object.fromEntries(formData);
             getParams += new URLSearchParams(formData).toString();
         }
-        $url = "ajax_load.php?token=" + new Date().getTime();
+        var $url = "ajax_load.php?token=" + new Date().getTime();
 
         return $.ajax({
             type: $type,
