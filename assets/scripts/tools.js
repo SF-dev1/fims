@@ -4027,6 +4027,41 @@ var Tools = function () {
 		});
 	}
 
+	function PrototypeReview_handleTable() {
+		var formData = new FormData();
+		var tableBody = $('#reviewBody');
+
+		formData.append("action", "getReviews");
+		window.setTimeout(function () {
+			var response = submitForm(formData, "POST");
+			var content = "";
+			var count = 0;
+			if (response.type == "success") {
+				response.data.forEach(row => {
+					count++;
+					content += '<tr>';
+					content += '<td>' + count + '</td>';
+					content += '<td>' + row.firstname + " " + row.lastname + '</td>';
+					content += '<td>' + row.orderNumberFormated + '</td>';
+					content += '<td>' + row.sku + '</td>';
+					content += '<td>' + row.design + '</td>';
+					content += '<td>' + row.valueForMoney + '</td>';
+					content += '<td>' + row.strap + '</td>';
+					content += '<td>' + row.buckle + '</td>';
+					content += '<td>' + row.durability + '</td>';
+					content += '<td>' + row.functionality + '</td>';
+					content += '<td>' + row.support + '</td>';
+					content += '<td>' + row.comfort + '</td>';
+					content += '<td>' + (((row.design + row.valueForMoney + row.strap + row.buckle + row.durability + row.functionality + row.support + row.comfort) / 8).toFixed(1)) + '</td>';
+					content += '<td>' + row.review + '</td>';
+					content += '</tr>';
+				});
+				tableBody.html(content);
+				TableAdvanced.init();
+			}
+		}, 100);
+	}
+
 	return {
 		//main function to initiate the module
 		init: function (type) {
@@ -4089,6 +4124,10 @@ var Tools = function () {
 				case "template_element":
 					templateElement_handleTable();
 					templateElement_handleValidation();
+					break;
+
+				case "prototype_review":
+					PrototypeReview_handleTable();
 					break;
 			}
 		}

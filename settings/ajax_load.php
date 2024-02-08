@@ -610,7 +610,7 @@ switch ($action) {
 		$db->join(TBL_TEMPLATE_MASTER . " mt", "mt.templateId=wt.masterTemplateId");
 		$getWhatsappTemplate = $db->get(TBL_TEMPLATE_WHATSAPP . " wt", null, array('wt.whatsappTemplateId', 'wt.masterTemplateId', 'wt.partnerTemplateId', 'wt.templateContent', 'wt.templateLanguage', 'wt.clientId', 'wt.firmId', 'CONCAT(UPPER(SUBSTRING(cw.whatsappClientName,1,1)),LOWER(SUBSTRING(cw.whatsappClientName,2))) AS whatsappClientName', 'f.firm_name', 'mt.templateName'));
 		$return['data'] = $getWhatsappTemplate;
-		
+
 		if (empty($return))
 			$return['data'] = array();
 
@@ -802,5 +802,15 @@ switch ($action) {
 			else
 				echo json_encode(array('type' => 'error', 'msg' => 'Unable to update payment'));
 		}
+		break;
+	case 'getReviews':
+		// error_reporting(E_ALL);
+		// ini_set('display_errors', '1');
+		// echo '<pre>';
+		$db->join(TBL_SP_ORDERS . " o", "o.orderId = r.orderId", "LEFT");
+		$db->orderBy("r.updatedDate");
+		$data = $db->get(TBL_PROTOTYPE_REVIEW . " r", null, "r.*, o.orderNumberFormated");
+
+		echo json_encode(["type" => "success", "data" => $data]);
 		break;
 }

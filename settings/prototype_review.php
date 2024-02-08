@@ -19,21 +19,27 @@ include_once(ROOT_PATH . '/header.php');
         <div class="row">
             <div class="portlet">
                 <div class="portlet-title">
-                    <strong>My Tasks</strong>
+                    <strong>Customer Reviews</strong>
                 </div>
                 <div class="portlet-body">
-                    <table class="table table-striped table-bordered table-hover dataTable no-footer" id="sample_1">
+                    <table class="table table-striped table-bordered table-hover" id="sample_1">
                         <thead>
                             <th>#</th>
-                            <th>Task Title</th>
-                            <th>Cartoon ID</th>
-                            <th>Quantity</th>
-                            <th>Assigned To</th>
-                            <th>Reaction Reason</th>
-                            <th>Status</th>
-                            <th>action</th>
+                            <th>Name</th>
+                            <th>Order Id</th>
+                            <th>sku</th>
+                            <th>Design</th>
+                            <th>Value For Money</th>
+                            <th>Strap</th>
+                            <th>Buckle</th>
+                            <th>Durability</th>
+                            <th>Functionality</th>
+                            <th>Customer Support</th>
+                            <th>Comfort</th>
+                            <th>Average</th>
+                            <th>Overall Review</th>
                         </thead>
-                        <tbody id="taskBody"></tbody>
+                        <tbody id="reviewBody"></tbody>
                     </table>
                 </div>
             </div>

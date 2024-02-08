@@ -67,7 +67,6 @@ function menu_items()
 					),
 					"footer" => array(
 						"plugins" => array(
-							"bootstrap-fileinput/bootstrap-fileinput.js?v=" . $js_version,
 							"datatables/media/js/jquery.dataTables.min.js?v=" . $js_version,
 							"datatables/extensions/TableTools/js/dataTables.tableTools.min.js?v=" . $js_version,
 							"datatables/extensions/ColReorder/js/dataTables.colReorder.min.js?v=" . $js_version,
@@ -2770,6 +2769,36 @@ function menu_items()
 						),
 						"init" => array(
 							'Tools.init("marketplaces");',
+						),
+					),
+				),
+				"prototype_review" => array(
+					"title" => "Prototype Review",
+					"icon" => "fa fa-user",
+					"href" => BASE_URL . "/settings/prototype_review.php",
+					"header" => array(
+						"css" => array(
+							"select2/select2.css",
+							"datatables/plugins/bootstrap/dataTables.bootstrap.css",
+							"bootstrap-switch/css/bootstrap-switch.min.css",
+						),
+					),
+					"footer" => array(
+						"plugins" => array(
+							"datatables/media/js/jquery.dataTables.min.js?v=" . $js_version,
+							"datatables/extensions/TableTools/js/dataTables.tableTools.min.js?v=" . $js_version,
+							"datatables/extensions/ColReorder/js/dataTables.colReorder.min.js?v=" . $js_version,
+							"datatables/extensions/Scroller/js/dataTables.scroller.min.js?v=" . $js_version,
+							"datatables/plugins/bootstrap/dataTables.bootstrap.js?v=" . $js_version,
+							"jquery-validation/js/jquery.validate.min.js?v=" . $js_version,
+							"select2/select2.min.js?v=" . $js_version,
+						),
+						"scripts" => array(
+							"table-advanced.js?v=" . $js_version,
+							"tools.js?v=" . $js_version
+						),
+						"init" => array(
+							'Tools.init("prototype_review");',
 						),
 					),
 				),

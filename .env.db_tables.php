@@ -70,6 +70,7 @@ $definer = array(
 	'TBL_PURCHASE_ORDER_ITEMS_LOT' => 'bas_purchase_order_item_lot',
 	'TBL_PURCHASE_ORDER_ITEMS' => 'bas_purchase_order_items',
 	'TBL_PURCHASE_ORDER' => 'bas_purchase_order',
+	'TBL_PROTOTYPE_REVIEW' => 'bas_prototype_review',
 	'TBL_REGISTERED_WARRANTY' => 'bas_registered_warranty',
 	'TBL_RMA' => 'bas_rma',
 	'TBL_RMA_PAYMENTS' => 'bas_rma_payments',
